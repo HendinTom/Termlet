@@ -1,0 +1,46 @@
+name: Publish frontend iterations
+on:
+  push:
+    branches: ['iteration/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: termlet-pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Assemble versioned previews
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public/iterations
+          latest=''
+          while IFS= read -r ref; do
+            slug=${ref#refs/remotes/origin/iteration/}
+            [[ $slug =~ ^[0-9]+-[a-z0-9-]+$ ]] || continue
+            target="public/iterations/$slug"
+            mkdir -p "$target"
+            git archive "$ref:site" | tar -x -C "$target"
+            test -f "$target/index.html"
+            latest="$target"
+          done < <(git for-each-ref --sort=version:refname --format='%(refname)' refs/remotes/origin/iteration/)
+          test -n "$latest"
+          cp -a "$latest/." public/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - id: deploy
+        uses: actions/deploy-pages@v4
