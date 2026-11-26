@@ -209,7 +209,6 @@ function Specimen({ id, sample, examples }) {
         {{
           Error: 'Choose a campus to continue.',
           FilterError: 'Choose a valid date range.',
-          Number: '10%',
           Kicker: 'Student sublets'
         }[id] || sample.room.title}
       </Part>

@@ -1,3 +1,4 @@
+import { iterations } from './history';
 import { useSyncExternalStore } from 'react';
 import { components, descendants, families } from '../components/catalog';
 import toneStyles from './tones.css?inline';
@@ -17,7 +18,7 @@ export const fontNames = {
   mono: 'Monospace'
 };
 export const baseTypography = { body: 'humanist', heading: 'editorial', size: 16 };
-const key = 'termlet:003:component-styles';
+const key = `termlet:${iterations[0].id}:component-styles`;
 const own = (object, id) => Object.hasOwn(object, id);
 const inRange = (n, min, max) => Number.isInteger(n) && n >= min && n <= max;
 

@@ -1,3 +1,4 @@
+import { iterations } from './history';
 import { useSyncExternalStore } from 'react';
 export const tokens = [
   { key: '--ink', name: 'Text', initial: '#222222' },
@@ -7,7 +8,7 @@ export const tokens = [
   { key: '--surface-radius', name: 'Panel radius', initial: 16, max: 36 },
   { key: '--surface-padding', name: 'Panel padding', initial: 24, min: 8, max: 40 }
 ];
-const storageKey = 'termlet:003:design-tokens';
+const storageKey = `termlet:${iterations[0].id}:design-tokens`;
 const modeKey = 'termlet:003:appearance';
 function readDarkMode() {
   try { return localStorage.getItem(modeKey) === 'dark'; } catch { return false; }

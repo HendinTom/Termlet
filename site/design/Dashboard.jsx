@@ -307,7 +307,7 @@ export function DesignDashboard({ route, sample, getExamples }) {
       ) : (
         <UI.LabLayout>
           <ChangeIndex iteration={iteration} selected={selected} />
-          <Comparison iteration={iteration} change={selected} />
+          <Comparison key={iteration.id + selected.id} iteration={iteration} change={selected} />
         </UI.LabLayout>
       )}
     </UI.DesignDashboard>

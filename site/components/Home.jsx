@@ -49,36 +49,6 @@ export function Home({ hasListing, spotlight, cards }) {
           </UI.HeroCaption>
         </UI.HeroSponsored>
       </UI.Hero>
-      <UI.Terms>
-        <UI.SectionHead as="div">
-          <UI.Heading>How the rent works</UI.Heading>
-        </UI.SectionHead>
-        <UI.Rates>
-          <UI.Rate as="div">
-            <UI.Number as="div">10%</UI.Number>
-            <div>
-              <UI.Heading as="h3">Support when it’s empty</UI.Heading>
-              <UI.Text>
-                Of lease rent for each fully vacant month of an approved listing. We keep searching during the
-                term.
-              </UI.Text>
-            </div>
-          </UI.Rate>
-          <UI.Rate as="div">
-            <UI.Number as="div">15%</UI.Number>
-            <div>
-              <UI.Heading as="h3">Standard fee when rented</UI.Heading>
-              <UI.Text>
-                Of collected sublet rent; you keep 85%. Optional Boosted (18%) and Featured (20%) plans add
-                sponsored placement.
-              </UI.Text>
-            </div>
-          </UI.Rate>
-        </UI.Rates>
-        <UI.Footnote>
-          Illustrative prototype rates. Support starts with the approved term. Each month is counted once.
-        </UI.Footnote>
-      </UI.Terms>
       <UI.Featured>
         <UI.SectionHead as="div">
           <UI.Heading>Explore student sublets</UI.Heading>

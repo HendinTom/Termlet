@@ -1,7 +1,8 @@
+import { iterations } from './history';
 import { useSyncExternalStore } from 'react';
 import { components } from '../components/catalog';
 
-const key = 'termlet:003:design-navigation';
+const key = `termlet:${iterations[0].id}:design-navigation`;
 let saved = {};
 try { saved = JSON.parse(sessionStorage.getItem(key)) || {}; } catch {}
 const listeners = new Set();

@@ -7,6 +7,12 @@ const capture = (name, version) => ({
 });
 
 export const iterations = [{
+  id: '004', name: 'Home page listings', previousPreview: 'https://hendintom.github.io/Termlet/iterations/003-hex-colors/', changes: [
+    { id: 'rent-explainer', area: 'Home page', name: 'How the rent works', status: 'Removed',
+      note: 'The home page now leads directly from the introduction to featured student sublets.',
+      before: capture('rent-explainer','003'), context: '#home' }
+  ]
+}, {
   id: '003', name: 'Hex color inputs', previousPreview: 'https://hendintom.github.io/Termlet/iterations/002-design-system/', changes: [
     { id: 'color-control', area: 'Design dashboard', name: 'Color picker', status: 'Updated',
       note: 'Paste a hex code beside the swatch to try an exact color in the live preview.',
