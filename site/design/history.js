@@ -9,7 +9,7 @@ const capture = (name, version) => ({
 export const iterations = [{
   id: '006', name: 'Adaptive cursor', previousPreview: 'https://hendintom.github.io/Termlet/iterations/005-cursor-glow/', changes: [
     { id: 'cursor-fill', area: 'Interactions', name: 'Adaptive cursor', status: 'Updated',
-      note: 'The secondary-accent dot fills the letters of a hovered word and the surface of a hovered button. The fill uses the dark neutral in light mode and the light neutral in dark mode.',
+      note: 'A hovered word holds the secondary accent until the pointer leaves it. Buttons fill dark in light mode and light in dark mode.',
       before: capture('cursor-glow','005'), after: capture('cursor-fill','006'), context: '#design/components/CursorGlow' }
   ]
 }, {

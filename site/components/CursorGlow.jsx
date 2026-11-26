@@ -22,6 +22,7 @@ export function CursorGlow({ specimen = false }) {
     if (specimen) return;
     const overlay = layer.current;
     const media = matchMedia('(any-hover: hover) and (any-pointer: fine) and (prefers-reduced-motion: no-preference) and (forced-colors: none)');
+    const supportsWordFill = Boolean(window.CSS?.highlights && window.Highlight);
     let active = null;
     let word = null;
     let clearWord = null;
@@ -57,7 +58,7 @@ export function CursorGlow({ specimen = false }) {
       if (!document.documentElement.hasAttribute('data-custom-pointer')) document.documentElement.dataset.customPointer = '';
       const eligible = !hit.closest(excluded);
       const next = eligible ? hit.closest(controls) || hit.closest(fillable) : null;
-      const nextWord = eligible && !next ? wordAtPoint(hit, x, y) : null;
+      const nextWord = eligible && !next && supportsWordFill ? wordAtPoint(hit, x, y) : null;
       if (next !== active || nextWord?.node !== word?.node || nextWord?.start !== word?.start || nextWord?.end !== word?.end) {
         release();
         if (next) {
@@ -73,7 +74,7 @@ export function CursorGlow({ specimen = false }) {
           active = next;
         } else if (nextWord) {
           word = nextWord;
-          clearWord = fillWord(word, duration);
+          clearWord = fillWord(word);
         }
       }
       if (active || word) {
@@ -123,7 +124,7 @@ export function CursorGlow({ specimen = false }) {
   if (specimen) return (
     <div className="cursor-glow-specimen">
       <div><span className="cursor-sample-shape">{mark}</span><small>Open space</small></div>
-      <div><span className="cursor-sample-shape"><strong>Sublet</strong></span><small>Over text</small></div>
+      <div><span className="cursor-sample-shape"><strong className="cursor-word-sample">Sublet</strong></span><small>Over text</small></div>
       <div><span className="cursor-sample-shape"><UI.SecondaryButton data-cursor-sample="">Find a sublet</UI.SecondaryButton></span><small>Over a button</small></div>
     </div>
   );

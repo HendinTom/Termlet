@@ -39,9 +39,8 @@
   initial-value: 0px;
 }
 
-::highlight(cursor-ink) { color: var(--ink); }
-::highlight(cursor-edge) { color: var(--secondary); }
-[data-cursor-text] { color: var(--ink); }
+::highlight(cursor-word) { color: var(--secondary); }
+.cursor-word-sample { color: var(--secondary); }
 
 [data-cursor-fill],
 [data-cursor-sample] {
