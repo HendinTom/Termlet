@@ -16,17 +16,23 @@
 .cursor-glow-layer::backdrop { background: transparent; pointer-events: none; }
 .cursor-glow {
   display: block;
-  width: var(--dot-diameter);
-  height: var(--dot-diameter);
-  border-radius: 50%;
-  background: var(--secondary);
+  width: var(--pointer-size);
+  height: var(--pointer-size);
+  color: var(--secondary);
   pointer-events: none;
+}
+.cursor-glow svg {
+  display: block;
+  fill: currentColor;
+  stroke: color-mix(in srgb, var(--base-ink) 60%, transparent);
+  stroke-width: 1;
+  stroke-linejoin: round;
 }
 .cursor-glow-layer > .cursor-glow {
   position: absolute;
   top: 0;
   left: 0;
-  transform: translate(-50%, -50%);
+  transform: translate(-9%, -10%);
   will-change: translate;
 }
 /* Paint inside the target so its clipping, border radius, and hit area stay intact. */
@@ -40,7 +46,7 @@
 }
 
 ::highlight(cursor-text) { color: var(--secondary); }
-.cursor-word-sample { color: var(--secondary); }
+.cursor-link-sample { color: var(--secondary); }
 
 [data-cursor-fill],
 [data-cursor-sample] {
@@ -49,8 +55,34 @@
   color: var(--paper);
 }
 [data-cursor-fill] :where(:not(svg, svg *)) { color: var(--paper); }
+/* A real outer shadow remains visible around a card's clipped photo. Its
+   starting footprint is inset and offset toward the pointer entry point. */
+@media (any-hover: hover) and (any-pointer: fine) and (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  :where(a[href]:has(img, [role="img"]):not(.card-image-link, .btn)):hover {
+    outline: 2px solid var(--secondary);
+    outline-offset: -2px;
+  }
+  :where(button, .btn, summary, [role="button"], [role="option"], .listing-card, .promotion-card, .stay-cards > .panel) {
+    transition: scale 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms ease-out, background-color 150ms ease-out;
+  }
+}
+[data-cursor-emphasis], [data-cursor-sample] {
+  --halo-color: color-mix(in srgb, var(--secondary) 58%, transparent);
+  --halo: 0 0 var(--cursor-glow) calc(var(--cursor-glow) / 9) var(--halo-color);
+  scale: 1.035;
+  box-shadow: var(--halo);
+}
+[data-cursor-emphasis="card"] {
+  scale: 1.015;
+  animation: cursor-halo-in var(--cursor-time) ease-out;
+}
 [data-cursor-fill] {
-  animation: cursor-fill-in var(--cursor-time) ease-out;
+  animation: cursor-fill-in var(--cursor-time) ease-out, cursor-halo-in var(--cursor-time) ease-out;
+}
+@keyframes cursor-halo-in {
+  from { box-shadow: var(--cursor-halo-x) var(--cursor-halo-y) 0 var(--cursor-halo-inset) var(--halo-color); }
+  75% { box-shadow: 0 0 calc(var(--cursor-glow) * 1.2) calc(var(--cursor-glow) / 5) var(--halo-color); }
+  to { box-shadow: var(--halo); }
 }
 @keyframes cursor-fill-in {
   from, to {

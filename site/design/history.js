@@ -7,6 +7,18 @@ const capture = (name, version) => ({
 });
 
 export const iterations = [{
+  id: '007', name: 'Pointer emphasis', previousPreview: 'https://hendintom.github.io/Termlet/iterations/006-cursor-fill/', changes: [
+    { id: 'pointer', area: 'Interactions', name: 'Adaptive cursor', status: 'Updated',
+      note: 'A rounded triangular pointer follows the mouse. Text links keep their secondary-accent ripple. Headings and body copy use ordinary text selection.',
+      before: capture('cursor-fill','006'), after: capture('pointer','007'), context: '#design/components/CursorGlow' },
+    { id: 'button-hover', area: 'Interactions', name: 'Button hover', status: 'Updated',
+      note: 'Hovering a button expands a soft glow from its entry edge and slightly enlarges the button. Both widths show the mouse interaction.',
+      before: capture('button-hover','006'), after: capture('button-hover','007'), context: '#home' },
+    { id: 'card-hover', area: 'Marketplace', name: 'Listing card hover', status: 'Updated',
+      note: 'Listing cards lift into a small secondary-accent glow. Their text links use the lighter link treatment. Both widths show the mouse interaction.',
+      before: capture('card-hover','006'), after: capture('card-hover','007'), context: '#browse' }
+  ]
+}, {
   id: '006', name: 'Adaptive cursor', previousPreview: 'https://hendintom.github.io/Termlet/iterations/005-cursor-glow/', changes: [
     { id: 'cursor-fill', area: 'Interactions', name: 'Adaptive cursor', status: 'Updated',
       note: 'The larger dot ripples through a whole heading or link and through individual words in paragraphs. Each letter holds the secondary accent until the pointer leaves. Buttons fill dark in light mode and light in dark mode.',

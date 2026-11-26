@@ -1,5 +1,6 @@
 export const glowControls = [
-  { key: 'diameter', label: 'Dot diameter', initial: 14, min: 4, max: 24, unit: 'px' },
-  { key: 'duration', label: 'Container fill duration', initial: 140, min: 0, max: 400, unit: 'ms' },
-  { key: 'rippleDuration', label: 'Text ripple duration', initial: 220, min: 0, max: 600, unit: 'ms' }
+  { key: 'pointerSize', label: 'Pointer size', initial: 20, min: 12, max: 32, unit: 'px' },
+  { key: 'duration', label: 'Emphasis ripple duration', initial: 210, min: 0, max: 600, unit: 'ms' },
+  { key: 'rippleDuration', label: 'Link ripple duration', initial: 220, min: 0, max: 600, unit: 'ms' },
+  { key: 'glowSize', label: 'Glow radius', initial: 12, min: 0, max: 24, unit: 'px' }
 ];
