@@ -1,19 +1,15 @@
 import { useEffect, useRef } from 'react';
+import { wordAtPoint, fillWord } from './cursorText';
 import { UI } from './UI';
 import { descendants } from './catalog';
 import { useComponentStyles } from '../design/componentStyles';
 import { glowControls } from './glowControls';
 
-const controls = 'button, a[href], summary, [role="button"], [role="option"]';
-const fillable = ['[data-cursor-fillable]', '[data-ui="Metric"]', '.portal-metrics > div', '.data-row', 'h1', 'h2', 'h3', 'h4', 'p', 'small', 'strong', 'legend', 'label:not(:has(input,select,textarea))',
-  ...['Text', 'Heading', 'Badge', 'Notice'].flatMap(family => descendants(family).map(part => '[data-ui="' + part.id + '"]'))
+const controls = 'button, .btn, .top nav a:last-child, summary, [role="button"], [role="option"]';
+const fillable = ['[data-cursor-fillable]', '[data-ui="Metric"]', '.portal-metrics > div', '.data-row',
+  ...['Badge', 'Notice'].flatMap(family => descendants(family).map(part => '[data-ui="' + part.id + '"]'))
 ].join(',');
 const excluded = 'img, picture, [role="img"], .card-image-link, .hero-image-link, .gallery-thumbs, input, textarea, select, [contenteditable="true"], [inert], :disabled, [aria-disabled="true"]';
-
-function fillTarget(hit) {
-  if (!hit || hit.closest(excluded)) return null;
-  return hit.closest(controls) || hit.closest(fillable);
-}
 
 export function CursorGlow({ specimen = false }) {
   const layer = useRef(null);
@@ -27,11 +23,16 @@ export function CursorGlow({ specimen = false }) {
     const overlay = layer.current;
     const media = matchMedia('(any-hover: hover) and (any-pointer: fine) and (prefers-reduced-motion: no-preference) and (forced-colors: none)');
     let active = null;
+    let word = null;
+    let clearWord = null;
     let point = null;
     let frame = 0;
     let lastDialog = null;
 
     function release() {
+      clearWord?.();
+      clearWord = null;
+      word = null;
       if (!active) return;
       delete active.dataset.cursorFill;
       for (const key of ['x', 'y', 'reach', 'start', 'time']) active.style.removeProperty('--cursor-' + key);
@@ -54,8 +55,10 @@ export function CursorGlow({ specimen = false }) {
       const hit = document.elementFromPoint(x, y);
       if (!hit) return hide();
       if (!document.documentElement.hasAttribute('data-custom-pointer')) document.documentElement.dataset.customPointer = '';
-      const next = fillTarget(hit);
-      if (next !== active) {
+      const eligible = !hit.closest(excluded);
+      const next = eligible ? hit.closest(controls) || hit.closest(fillable) : null;
+      const nextWord = eligible && !next ? wordAtPoint(hit, x, y) : null;
+      if (next !== active || nextWord?.node !== word?.node || nextWord?.start !== word?.start || nextWord?.end !== word?.end) {
         release();
         if (next) {
           const rect = next.getBoundingClientRect();
@@ -68,9 +71,12 @@ export function CursorGlow({ specimen = false }) {
           next.style.setProperty('--cursor-time', duration + 'ms');
           next.dataset.cursorFill = '';
           active = next;
+        } else if (nextWord) {
+          word = nextWord;
+          clearWord = fillWord(word, duration);
         }
       }
-      if (active) {
+      if (active || word) {
         if (!overlay.hidden) {
           overlay.hidePopover?.();
           overlay.hidden = true;
@@ -117,6 +123,7 @@ export function CursorGlow({ specimen = false }) {
   if (specimen) return (
     <div className="cursor-glow-specimen">
       <div><span className="cursor-sample-shape">{mark}</span><small>Open space</small></div>
+      <div><span className="cursor-sample-shape"><strong>Sublet</strong></span><small>Over text</small></div>
       <div><span className="cursor-sample-shape"><UI.SecondaryButton data-cursor-sample="">Find a sublet</UI.SecondaryButton></span><small>Over a button</small></div>
     </div>
   );

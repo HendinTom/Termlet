@@ -19,6 +19,8 @@ Register reusable UI parts and their parent variants in the component catalog. U
 
 ## Iteration workflow
 
+Fixes to an existing iteration stay on its current branch. Update the existing visual record when its intended behavior is corrected. Reserve the next numbered branch for a new design change.
+
 Design-system-only updates stay on the current iteration branch and do not add visual change records.
 
 1. Read the README, check the branch and working tree, then branch from the latest iteration using the next numbered name. Preserve existing work and earlier iteration branches.
