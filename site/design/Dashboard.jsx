@@ -254,7 +254,7 @@ function DesignMap({ sample }) {
               <ListingCard item={sample} />
               <UI.MapNode as="div">
                 <UI.Heading as="h4">Listing card / Price row</UI.Heading>
-                <PriceRow price={sample.price} title={sample.room.title} href="#room/sample" />
+                <PriceRow price={sample.price} />
               </UI.MapNode>
             </section>
             <section>

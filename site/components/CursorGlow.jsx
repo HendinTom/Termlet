@@ -1,37 +1,33 @@
 import { useEffect, useRef } from 'react';
-import { rippleLink } from './cursorText';
+import { cardEdge, bridgePath } from './cardEdge';
 import { UI } from './UI';
 import { useComponentStyles } from '../design/componentStyles';
 import { glowControls } from './glowControls';
 
 const controls = 'button, .btn, summary, [role="button"], [role="option"]';
 const cards = '.listing-card, .promotion-card, .stay-cards > .panel';
-const links = 'a[href], [role="link"]';
 const excluded = '[inert], :disabled, [aria-disabled="true"], [contenteditable="true"]';
 
 export function CursorGlow({ specimen = false }) {
   const layer = useRef(null);
   const pointer = useRef(null);
+  const bridge = useRef(null);
   const { edits } = useComponentStyles();
   const settings = edits.CursorGlow || {};
-  const [pointerSize, duration, rippleDuration, glowSize] = glowControls.map(({ key, initial }) => settings[key] ?? initial);
+  const [pointerSize, duration, glowSize, edgeRange] = glowControls.map(({ key, initial }) => settings[key] ?? initial);
 
   useEffect(() => {
     if (specimen) return;
     const overlay = layer.current;
     const media = matchMedia('(any-hover: hover) and (any-pointer: fine) and (prefers-reduced-motion: no-preference) and (forced-colors: none)');
-    const supportsLinkRipple = Boolean(window.CSS?.highlights && window.Highlight);
     let active = null;
-    let activeLink = null;
-    let clearLink = null;
+    let cornerRadius = 0;
     let point = null;
     let frame = 0;
     let lastDialog = null;
 
     function release() {
-      clearLink?.();
-      clearLink = null;
-      activeLink = null;
+      delete overlay.dataset.edge;
       if (!active) return;
       delete active.dataset.cursorFill;
       delete active.dataset.cursorEmphasis;
@@ -57,14 +53,18 @@ export function CursorGlow({ specimen = false }) {
       if (!document.documentElement.hasAttribute('data-custom-pointer')) document.documentElement.dataset.customPointer = '';
       const eligible = !hit.closest(excluded);
       const button = eligible && hit.closest(controls);
-      const link = eligible && hit.closest(links);
       const card = eligible && hit.closest(cards);
-      // A card image represents the listing itself. An explicit text link inside
-      // the card uses the same lighter treatment as any other text link.
-      const textLink = !button && link && link.textContent.trim() ? link : null;
-      const next = button || (!textLink && card) || null;
-      const nextLink = supportsLinkRipple ? textLink : null;
-      if (next !== active || nextLink !== activeLink) {
+      let next = button || card || null;
+      let edge = null;
+      // A gap has no target of its own. Only a previously touched card may
+      // keep its glow there, and an unrelated link or control takes priority.
+      if (!next && eligible && active?.isConnected && active.dataset.cursorEmphasis === 'card'
+        && !hit.closest('a[href], [role="link"], input, select, textarea')
+        && hit.contains(active)) {
+        edge = cardEdge(active.getBoundingClientRect(), cornerRadius, point, edgeRange);
+        if (edge) next = active;
+      }
+      if (next !== active) {
         release();
         if (next) {
           const rect = next.getBoundingClientRect();
@@ -73,7 +73,9 @@ export function CursorGlow({ specimen = false }) {
           next.style.setProperty('--cursor-x', left + 'px');
           next.style.setProperty('--cursor-y', top + 'px');
           next.style.setProperty('--cursor-reach', Math.ceil(reach) + 'px');
-          next.style.setProperty('--cursor-start', getComputedStyle(next).backgroundColor);
+          const style = getComputedStyle(next);
+          cornerRadius = parseFloat(style.borderTopLeftRadius) || 0;
+          next.style.setProperty('--cursor-start', style.backgroundColor);
           next.style.setProperty('--cursor-time', duration + 'ms');
           const inset = Math.min(rect.width, rect.height) / 2;
           const clampOffset = value => Math.max(-inset, Math.min(inset, value));
@@ -84,12 +86,21 @@ export function CursorGlow({ specimen = false }) {
           next.dataset.cursorEmphasis = button ? 'button' : 'card';
           if (button) next.dataset.cursorFill = '';
           active = next;
-        } else if (nextLink) {
-          activeLink = nextLink;
-          clearLink = rippleLink(nextLink, point, rippleDuration);
         }
       }
-      if (active?.dataset.cursorEmphasis === 'button' || activeLink) {
+      if (active?.dataset.cursorEmphasis === 'card' && glowSize) {
+        edge ??= cardEdge(active.getBoundingClientRect(), cornerRadius, point, edgeRange);
+        if (edge) {
+          bridge.current.setAttribute('transform', `translate(${edge.x} ${edge.y}) rotate(${edge.angle})`);
+          bridge.current.setAttribute('d', bridgePath(edge));
+          overlay.style.setProperty('--edge-strength', edge.strength);
+          overlay.style.setProperty('--edge-blur', Math.min(8, glowSize * 0.6) * edge.strength + 'px');
+          overlay.dataset.edge = '';
+        } else {
+          delete overlay.dataset.edge;
+        }
+      }
+      if (active?.dataset.cursorEmphasis === 'button') {
         if (!overlay.hidden) {
           overlay.hidePopover?.();
           overlay.hidden = true;
@@ -130,21 +141,26 @@ export function CursorGlow({ specimen = false }) {
     document.addEventListener('visibilitychange', hide, options);
     media.addEventListener('change', hide, options);
     return () => { controller.abort(); hide(); };
-  }, [specimen, duration, rippleDuration, glowSize]);
+  }, [specimen, duration, glowSize, edgeRange]);
 
   const mark = (
     <UI.CursorGlow aria-hidden="true" ref={pointer} style={{ '--pointer-size': pointerSize + 'px' }}>
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M3.9 2.5C2.5 1.7 1.7 2.6 2 4l3.9 16.1c.4 1.6 1.7 1.8 2.6.5l4-5.1c.4-.5.9-.8 1.6-.9l6.4-1.2c1.6-.3 1.8-1.6.4-2.4Z" />
+      {/* Phosphor Cursor Fill, MIT. License is distributed in public/licenses. */}
+      <svg viewBox="20 20 245 245" aria-hidden="true">
+        <path transform="rotate(15 38 38)" d="M220.49,207.8,207.8,220.49a12,12,0,0,1-17,0l-56.57-56.57L115,214.08l-.13.33A15.84,15.84,0,0,1,100.26,224l-.78,0a15.82,15.82,0,0,1-14.41-11L32.8,52.92A15.95,15.95,0,0,1,52.92,32.8L213,85.07a16,16,0,0,1,1.41,29.8l-.33.13-50.16,19.27,56.57,56.56A12,12,0,0,1,220.49,207.8Z" />
       </svg>
     </UI.CursorGlow>
   );
   if (specimen) return (
     <div className="cursor-glow-specimen">
       <div><span className="cursor-sample-shape">{mark}</span><small>Open space</small></div>
-      <div><span className="cursor-sample-shape"><UI.Link href="#browse" className="cursor-link-sample">Find a sublet</UI.Link></span><small>Over a link</small></div>
       <div><span className="cursor-sample-shape"><UI.SecondaryButton data-cursor-sample="" style={{ '--cursor-glow': glowSize + 'px' }}>List my place</UI.SecondaryButton></span><small>Over a button</small></div>
     </div>
   );
-  return <div className="cursor-glow-layer" ref={layer} popover="manual" hidden inert aria-hidden="true">{mark}</div>;
+  return (
+    <div className="cursor-glow-layer" ref={layer} popover="manual" hidden inert aria-hidden="true">
+      <svg className="card-edge-bridge" aria-hidden="true"><path ref={bridge} /></svg>
+      {mark}
+    </div>
+  );
 }

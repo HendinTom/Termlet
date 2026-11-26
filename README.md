@@ -12,7 +12,9 @@ Open **Design system** in the marketplace footer. **Changes** opens the manually
 
 The moon/sun button beside the Termlet logo switches between light and dark mode. Dark mode exchanges the two neutral roles and preserves both accent values. The browser remembers the choice.
 
-Under **Components → Adaptive cursor**, adjust the rounded triangular pointer’s size, glow radius and ripple timing. Buttons and cards grow slightly as the secondary-accent glow spreads from the entry edge. Plain text links ripple across their lettering. Headings and paragraphs retain ordinary selection. Touch and reduced-motion users keep native pointer behavior.
+Under **Components → Adaptive cursor**, adjust the arrow size, button and card ripple timing, glow radius and card edge range. A card lights up on contact. Near its edge, a soft connection follows the pointer for up to 28 px and releases when the pointer reaches another card or leaves that range. Plain links and text use their ordinary styles. Touch and reduced-motion users keep native pointer behavior.
+
+The pointer uses Phosphor’s Cursor Fill with Termlet’s palette and a small rotation. [Original artwork](https://github.com/phosphor-icons/core/blob/main/assets/fill/cursor-fill.svg) · [MIT license](site/public/licenses/phosphor-icons.txt)
 
 The palette includes ink, paper, a primary accent and a secondary accent for small highlights. Define new primitives and their parents in `site/components/catalog.js`. The marketplace and catalog use the same React components. Component edits cascade by family and property.
 

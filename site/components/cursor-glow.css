@@ -25,14 +25,14 @@
   display: block;
   fill: currentColor;
   stroke: color-mix(in srgb, var(--base-ink) 60%, transparent);
-  stroke-width: 1;
+  stroke-width: 10;
   stroke-linejoin: round;
 }
 .cursor-glow-layer > .cursor-glow {
   position: absolute;
   top: 0;
   left: 0;
-  transform: translate(-9%, -10%);
+  transform: translate(-7%, -7%);
   will-change: translate;
 }
 /* Paint inside the target so its clipping, border radius, and hit area stay intact. */
@@ -45,8 +45,23 @@
   initial-value: 0px;
 }
 
-::highlight(cursor-text) { color: var(--secondary); }
-.cursor-link-sample { color: var(--secondary); }
+.card-edge-bridge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  pointer-events: none;
+}
+.cursor-glow-layer[data-edge] .card-edge-bridge { display: block; }
+.card-edge-bridge path {
+  fill: var(--secondary);
+  opacity: calc(var(--edge-strength) * 0.75);
+  filter: blur(2px);
+}
+.cursor-glow-layer[data-edge] .cursor-glow svg {
+  filter: drop-shadow(0 0 var(--edge-blur) var(--secondary));
+}
 
 [data-cursor-fill],
 [data-cursor-sample] {

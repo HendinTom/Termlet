@@ -10,15 +10,12 @@ export function FooterLinks() {
   );
 }
 
-export function PriceRow({ price, title, href }) {
+export function PriceRow({ price }) {
   return (
     <UI.CardBottom>
       <span>
         <strong>{price}</strong> <UI.Text as="small">/ month</UI.Text>
       </span>
-      <UI.ViewLink href={href} aria-label={'View room: ' + title}>
-        View room <span aria-hidden="true">→</span>
-      </UI.ViewLink>
     </UI.CardBottom>
   );
 }
@@ -63,7 +60,7 @@ export function ListingCard({ item }) {
         <UI.CardFacts>
           {room.type || 'Student sublet'} · {dates}
         </UI.CardFacts>
-        <PriceRow title={room.title} price={price} href={href} />
+        <PriceRow price={price} />
       </UI.Copy>
     </UI.ListingCard>
   );

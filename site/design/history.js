@@ -7,6 +7,18 @@ const capture = (name, version) => ({
 });
 
 export const iterations = [{
+  id: '008', name: 'Card edge glow', previousPreview: 'https://hendintom.github.io/Termlet/iterations/007-pointer-emphasis/', changes: [
+    { id: 'pointer', area: 'Interactions', name: 'Adaptive cursor', status: 'Updated',
+      note: 'The pointer has an arrowhead and stem. Only buttons and other fillable surfaces use the ripple.',
+      before: capture('pointer','007'), after: capture('pointer','008'), context: '#design/components/CursorGlow' },
+    { id: 'card-edge', area: 'Marketplace', name: 'Card edge glow', status: 'Updated',
+      note: 'After contact, the card glow follows the pointer a short distance into the gap. Both captures show a mouse just outside the first card.',
+      before: capture('card-edge','007'), after: capture('card-edge','008'), context: '#browse' },
+    { id: 'price-row', area: 'Marketplace', name: 'Listing price row', status: 'Updated',
+      note: 'The footer shows the monthly price. The photo and listing title open the room.',
+      before: capture('price-row','007'), after: capture('price-row','008'), context: '#browse' }
+  ]
+}, {
   id: '007', name: 'Pointer emphasis', previousPreview: 'https://hendintom.github.io/Termlet/iterations/006-cursor-fill/', changes: [
     { id: 'pointer', area: 'Interactions', name: 'Adaptive cursor', status: 'Updated',
       note: 'A rounded triangular pointer follows the mouse. Text links keep their secondary-accent ripple. Headings and body copy use ordinary text selection.',
