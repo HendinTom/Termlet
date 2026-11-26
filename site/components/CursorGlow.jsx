@@ -1,14 +1,15 @@
 import { useEffect, useRef } from 'react';
-import { wordAtPoint, fillWord } from './cursorText';
+import { textGroups, wordAtPoint, sameText, rippleText } from './cursorText';
 import { UI } from './UI';
 import { descendants } from './catalog';
 import { useComponentStyles } from '../design/componentStyles';
 import { glowControls } from './glowControls';
 
-const controls = 'button, .btn, .top nav a:last-child, summary, [role="button"], [role="option"]';
+const controls = 'button, .btn, summary, [role="button"], [role="option"]';
 const fillable = ['[data-cursor-fillable]', '[data-ui="Metric"]', '.portal-metrics > div', '.data-row',
   ...['Badge', 'Notice'].flatMap(family => descendants(family).map(part => '[data-ui="' + part.id + '"]'))
 ].join(',');
+const surfacesAndGroups = [fillable, textGroups].join(',');
 const excluded = 'img, picture, [role="img"], .card-image-link, .hero-image-link, .gallery-thumbs, input, textarea, select, [contenteditable="true"], [inert], :disabled, [aria-disabled="true"]';
 
 export function CursorGlow({ specimen = false }) {
@@ -16,24 +17,24 @@ export function CursorGlow({ specimen = false }) {
   const dot = useRef(null);
   const { edits } = useComponentStyles();
   const settings = edits.CursorGlow || {};
-  const [diameter, duration] = glowControls.map(({ key, initial }) => settings[key] ?? initial);
+  const [diameter, duration, rippleDuration] = glowControls.map(({ key, initial }) => settings[key] ?? initial);
 
   useEffect(() => {
     if (specimen) return;
     const overlay = layer.current;
     const media = matchMedia('(any-hover: hover) and (any-pointer: fine) and (prefers-reduced-motion: no-preference) and (forced-colors: none)');
-    const supportsWordFill = Boolean(window.CSS?.highlights && window.Highlight);
+    const supportsTextFill = Boolean(window.CSS?.highlights && window.Highlight);
     let active = null;
-    let word = null;
-    let clearWord = null;
+    let textTarget = null;
+    let clearText = null;
     let point = null;
     let frame = 0;
     let lastDialog = null;
 
     function release() {
-      clearWord?.();
-      clearWord = null;
-      word = null;
+      clearText?.();
+      clearText = null;
+      textTarget = null;
       if (!active) return;
       delete active.dataset.cursorFill;
       for (const key of ['x', 'y', 'reach', 'start', 'time']) active.style.removeProperty('--cursor-' + key);
@@ -57,9 +58,14 @@ export function CursorGlow({ specimen = false }) {
       if (!hit) return hide();
       if (!document.documentElement.hasAttribute('data-custom-pointer')) document.documentElement.dataset.customPointer = '';
       const eligible = !hit.closest(excluded);
-      const next = eligible ? hit.closest(controls) || hit.closest(fillable) : null;
-      const nextWord = eligible && !next && supportsWordFill ? wordAtPoint(hit, x, y) : null;
-      if (next !== active || nextWord?.node !== word?.node || nextWord?.start !== word?.start || nextWord?.end !== word?.end) {
+      const part = eligible ? hit.closest(surfacesAndGroups) : null;
+      const group = part?.matches(textGroups) ? part : null;
+      const next = eligible ? hit.closest(controls) || (group ? null : part) : null;
+      let nextText = null;
+      if (eligible && !next && supportsTextFill) {
+        nextText = group ? { node: group } : wordAtPoint(hit, x, y);
+      }
+      if (next !== active || !sameText(nextText, textTarget)) {
         release();
         if (next) {
           const rect = next.getBoundingClientRect();
@@ -72,12 +78,12 @@ export function CursorGlow({ specimen = false }) {
           next.style.setProperty('--cursor-time', duration + 'ms');
           next.dataset.cursorFill = '';
           active = next;
-        } else if (nextWord) {
-          word = nextWord;
-          clearWord = fillWord(word);
+        } else if (nextText) {
+          textTarget = nextText;
+          clearText = rippleText(nextText, point, rippleDuration);
         }
       }
-      if (active || word) {
+      if (active || textTarget) {
         if (!overlay.hidden) {
           overlay.hidePopover?.();
           overlay.hidden = true;
@@ -118,13 +124,13 @@ export function CursorGlow({ specimen = false }) {
     document.addEventListener('visibilitychange', hide, options);
     media.addEventListener('change', hide, options);
     return () => { controller.abort(); hide(); };
-  }, [specimen, duration]);
+  }, [specimen, duration, rippleDuration]);
 
   const mark = <UI.CursorGlow aria-hidden="true" ref={dot} style={{ '--dot-diameter': diameter + 'px' }} />;
   if (specimen) return (
     <div className="cursor-glow-specimen">
       <div><span className="cursor-sample-shape">{mark}</span><small>Open space</small></div>
-      <div><span className="cursor-sample-shape"><strong className="cursor-word-sample">Sublet</strong></span><small>Over text</small></div>
+      <div><span className="cursor-sample-shape"><strong className="cursor-word-sample">Student sublets</strong></span><small>Over a heading</small></div>
       <div><span className="cursor-sample-shape"><UI.SecondaryButton data-cursor-sample="">Find a sublet</UI.SecondaryButton></span><small>Over a button</small></div>
     </div>
   );

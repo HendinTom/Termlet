@@ -39,7 +39,7 @@
   initial-value: 0px;
 }
 
-::highlight(cursor-word) { color: var(--secondary); }
+::highlight(cursor-text) { color: var(--secondary); }
 .cursor-word-sample { color: var(--secondary); }
 
 [data-cursor-fill],

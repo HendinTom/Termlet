@@ -12,7 +12,7 @@ Open **Design system** in the marketplace footer. **Changes** opens the manually
 
 The moon/sun button beside the Termlet logo switches between light and dark mode. Dark mode exchanges the two neutral roles and preserves both accent values. The browser remembers the choice.
 
-Under **Components → Adaptive cursor**, adjust the secondary-accent dot diameter and the time it takes to fill a button or other container. Hovering a word colors its letters with the secondary accent until the pointer leaves. Open space between words shows the dot. Buttons use the theme’s text color as their fill, with a contrasting label. Touch and reduced-motion users keep native pointer behavior. Selecting primary-accent text uses the secondary highlight.
+Under **Components → Adaptive cursor**, adjust the dot diameter, text ripple duration and container fill duration. The 14 px dot expands into a secondary-accent ripple across a link or heading, including nested and wrapped text. Paragraphs ripple one hovered word at a time. Each letter keeps its color until the pointer leaves the target. Add `data-cursor-group` to group another component’s text. Buttons use the theme’s text color as their fill, with a contrasting label. Touch and reduced-motion users keep native pointer behavior. Selecting primary-accent text uses the secondary highlight.
 
 The palette includes ink, paper, a primary accent and a secondary accent for small highlights. Define new primitives and their parents in `site/components/catalog.js`. The marketplace and catalog use the same React components. Component edits cascade by family and property.
 
