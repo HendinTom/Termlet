@@ -14,7 +14,8 @@ Termlet is a mobile-friendly student sublet marketplace for Waterloo Region and 
 - Maintain a map of adopted design decisions and a record of changes from the previous branch. Label experiments separately from adopted defaults.
 - Provide opt-in controls for experimenting with colors and other visual settings. Keep experiments local until a change is adopted in source.
 
-Use the editable ink, paper and accent tokens for app UI colors. Derive tints, shades, borders and translucent states in CSS.
+Use ink, paper, the primary accent and the secondary accent for app UI colors. Reserve the brighter secondary accent for small highlights. Derive tints, shades and local hue adjustments in CSS.
+Register reusable UI parts and their parent variants in the component catalog. Use the shared React primitives on marketplace and design screens. Let each property inherit independently. A variant override should affect only that property.
 
 ## Iteration workflow
 

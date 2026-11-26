@@ -1,20 +1,26 @@
+import { UI } from './components/UI';
+import { MarketSelect, PickerContext, PickerContents, PickerChoices } from './components/Picker';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { PaymentTable } from './components/PaymentTable';
 import { SearchFilters } from './components/SearchFilters';
 import { Gallery } from './components/Gallery';
-import { StudentCheck } from './components/StudentCheck';
+import { StudentCheck, PageHead } from './components/StudentCheck';
 import { Home } from './components/Home';
 import { SearchResults } from './components/Marketplace';
 import { DesignDashboard } from './design/Dashboard';
 import { termletRooms, termletRegions, termletGalleryLabels } from './catalog';
 
-export function startMarketplace(){
+const makeExamples = () => startMarketplace(true);
+
+export function startMarketplace(examplesOnly = false){
   const roots = new Map();
   function mount(container, content) {
     if (!roots.has(container)) roots.set(container, createRoot(container));
     const viewRoot = roots.get(container);
-    flushSync(() => viewRoot.render(content));
+    flushSync(() =>
+      viewRoot.render(<PickerContext.Provider value={openPicker}>{content}</PickerContext.Provider>)
+    );
   }
   const main=document.querySelector('main');
   const storeKey='termlet-student-prototype-v1';
@@ -29,19 +35,31 @@ export function startMarketplace(){
   const percent = rate => Math.round(rate*100)+'%';
   const money=n=>new Intl.NumberFormat('en-CA',{style:'currency',currency:'CAD',maximumFractionDigits:Number.isInteger(n)?0:2}).format(n);
   const cents=n=>Math.round((n+Number.EPSILON)*100)/100;
-  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const numMonth=s=>{const [year,month]=s.split('-').map(Number);return year*12+month-1};
   const monthName=(s,offset=0)=>new Date(2000,numMonth(s)-24000+offset,1).toLocaleDateString('en-CA',{month:'short',year:'numeric'});
   const duration=l=>numMonth(l.end)-numMonth(l.start)+1;
   const roundMonth=(rate,fraction)=>cents(rate*fraction);
-  const link=(href,label,alt=false)=>`<a class="btn${alt?' alt':''}" href="#${href}">${esc(label)} <span aria-hidden="true" class="arrow">↗</span></a>`;
-  const act=(key,label,alt=false)=>`<button type="button" class="btn${alt?' alt':''}" data-act="${key}">${esc(label)}</button>`;
-  const head=(title,sub,back='home',bl='Home')=>`<div class="page-head"><a class="back" href="#${back}">← ${esc(bl)}</a><h1 class="page-title">${esc(title)}</h1><p class="lede">${esc(sub)}</p></div>`;
-  const row=(label,value,total=false)=>`<div class="data-row${total?' total':''}"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
-  const note=s=>`<div class="demo-note">${esc(s)}</div>`;
+  function link(href, label, alt = false) {
+    const Button = alt ? UI.SecondaryButton : UI.PrimaryButton;
+    return (
+      <Button as="a" href={'#' + href}>
+        {label} <UI.Arrow aria-hidden="true">↗</UI.Arrow>
+      </Button>
+    );
+  }
+  function act(action,label,alt=false) {
+    const Button=alt?UI.SecondaryButton:UI.PrimaryButton;
+    return <Button type="button" data-act={action}>{label}</Button>;
+  }
+  const head=(title,description,back='home',backLabel='Home')=><PageHead {...{title,description,back,backLabel}}/>;
+  function row(label,value,total=false) {
+    const Row=total?UI.TotalRow:UI.DataRow;
+    return <Row><span>{label}</span><strong>{value}</strong></Row>;
+  }
+  const note = (text) => <UI.DemoNote>{text}</UI.DemoNote>;
   const sample=termletRooms.sample;
   const photo=l=>mediaUrl(storedPhotos(l)[0] || 'room.jpg');
-  let model={listing:null,requests:{}};try{const prev=JSON.parse(sessionStorage.getItem(storeKey));if(prev&&prev.requests)model=prev}catch{}
+  let model={listing:null,requests:{}};try{const prev=!examplesOnly && JSON.parse(sessionStorage.getItem(storeKey));if(prev&&prev.requests)model=prev}catch{}
   function save(){
     try {sessionStorage.setItem(storeKey,JSON.stringify(model));}
     catch {document.getElementById('storage-status').textContent='This tab could not save your changes. Keep it open to continue this demo.';}
@@ -60,7 +78,25 @@ export function startMarketplace(){
   }
   function listingMonthField(name, label, value) {
     const [year, month] = value.split('-');
-    return `<fieldset class="month-field"><legend>${label}</legend><div class="input-pair"><select name="${name}Month" aria-label="${label}, month">${months.map((m,i)=>option(String(i+1).padStart(2,'0'),m,month)).join('')}</select><input name="${name}Year" aria-label="${label}, year" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required value="${esc(year)}"></div></fieldset>`;
+    return (
+      <UI.MonthField>
+        <UI.Label as="legend">{label}</UI.Label>
+        <UI.InputPair>
+          <MarketSelect name={name + 'Month'} aria-label={label + ', month'} defaultValue={month}>
+            {months.map((m, i) => option(String(i + 1).padStart(2, '0'), m))}
+          </MarketSelect>
+          <UI.Field
+            name={name + 'Year'}
+            aria-label={label + ', year'}
+            inputMode="numeric"
+            pattern="[0-9]{4}"
+            maxLength="4"
+            required
+            defaultValue={year}
+          />
+        </UI.InputPair>
+      </UI.MonthField>
+    );
   }
   function termFilters(rooms) {
     const all = Object.values(rooms);
@@ -89,19 +125,59 @@ export function startMarketplace(){
     return .75+.25*(Math.sqrt(entry*entry+4*curve*(v-budgetKnee))-entry)/(2*curve);
   }
   function budgetFields() {
-    return <fieldset className="budget-field"><legend>Monthly rent (CAD)</legend>
-      <div className="budget-track" aria-describedby="budget-step">
-        <div className="budget-rail" aria-hidden="true"><div className="budget-selection"></div></div>
-        <input id="rent-min" type="range" name="minBudget" min="0" max={budgetCeiling} step="50" defaultValue={filterMin || 0} aria-label="Minimum monthly rent" aria-describedby="budget-step"/>
-        <input id="rent-max" type="range" name="budget" min="0" max={budgetCeiling} step="50" defaultValue={filterBudget} aria-label="Maximum monthly rent" aria-describedby="budget-step"/>
-        <span className="budget-handle budget-lower" aria-hidden="true"></span>
-        <span className="budget-handle budget-upper" aria-hidden="true"></span>
-        <output className="budget-bubble" aria-hidden="true"></output>
-        <div className="budget-axis" aria-hidden="true"><span>{money(0)}</span><span>{money(budgetKnee)}</span><span>{money(budgetCeiling)}</span></div>
-      </div>
-      <div className="budget-endpoints"><label htmlFor="rent-min">Minimum <output id="rent-min-value"></output></label><label htmlFor="rent-max">Maximum <output id="rent-max-value"></output></label></div>
-      <p id="budget-step" className="sr-only">Drag either end to set the budget, or drag the middle to move both ends. The first three quarters run from $0 to $4,500; the last quarter increases faster to $10,000. Arrow keys adjust the amount; Shift plus an arrow moves the range.</p>
-    </fieldset>;
+    return (
+      <UI.BudgetField>
+        <UI.Label as="legend">Monthly rent (CAD)</UI.Label>
+        <UI.BudgetTrack aria-describedby="budget-step">
+          <UI.BudgetRail aria-hidden="true">
+            <UI.BudgetSelection></UI.BudgetSelection>
+          </UI.BudgetRail>
+          <UI.RangeField
+            id="rent-min"
+            type="range"
+            name="minBudget"
+            min="0"
+            max={budgetCeiling}
+            step="50"
+            defaultValue={filterMin || 0}
+            aria-label="Minimum monthly rent"
+            aria-describedby="budget-step"
+          />
+          <UI.RangeField
+            id="rent-max"
+            type="range"
+            name="budget"
+            min="0"
+            max={budgetCeiling}
+            step="50"
+            defaultValue={filterBudget}
+            aria-label="Maximum monthly rent"
+            aria-describedby="budget-step"
+          />
+          <UI.BudgetLower aria-hidden="true"></UI.BudgetLower>
+          <UI.BudgetUpper aria-hidden="true"></UI.BudgetUpper>
+          <UI.BudgetBubble as="output" aria-hidden="true"></UI.BudgetBubble>
+          <UI.BudgetAxis aria-hidden="true">
+            <span>{money(0)}</span>
+            <span>{money(budgetKnee)}</span>
+            <span>{money(budgetCeiling)}</span>
+          </UI.BudgetAxis>
+        </UI.BudgetTrack>
+        <UI.BudgetEndpoints>
+          <UI.Label htmlFor="rent-min">
+            Minimum <output id="rent-min-value"></output>
+          </UI.Label>
+          <UI.Label htmlFor="rent-max">
+            Maximum <output id="rent-max-value"></output>
+          </UI.Label>
+        </UI.BudgetEndpoints>
+        <UI.Text id="budget-step" className="sr-only">
+          Drag either end to set the budget, or drag the middle to move both ends. The first three quarters run
+          from $0 to $4,500; the last quarter increases faster to $10,000. Arrow keys adjust the amount; Shift
+          plus an arrow moves the range.
+        </UI.Text>
+      </UI.BudgetField>
+    );
   }
   function updateBudgetSlider(form, changed) {
     const lower = form.elements.minBudget, upper = form.elements.budget;
@@ -209,10 +285,9 @@ export function startMarketplace(){
     bound(until,v=>from.value && v<from.value);
     bound(from,v=>until.value && v>until.value);
   }
-  const pickerButtons = new WeakMap();
   let activePicker = null, pickerSerial = 0;
   function focusField(input) {
-    const button = pickerButtons.get(input);
+    const button = input.nextElementSibling?.matches('.picker-trigger') ? input.nextElementSibling : null;
     if (button) {
       for (const attr of ['aria-invalid','aria-describedby']) {
         if (input.hasAttribute(attr)) button.setAttribute(attr, input.getAttribute(attr));
@@ -220,138 +295,209 @@ export function startMarketplace(){
     }
     (button || input).focus();
   }
-  function setupPickers() {
-    if (typeof HTMLDialogElement === 'undefined') return;
-    for (const select of main.querySelectorAll('select')) {
-      const label = select.getAttribute('aria-label') || [...(select.labels?.[0]?.childNodes || [])].filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent).join('').trim() || 'Choose an option';
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'picker-trigger';
-      button.setAttribute('aria-haspopup', 'dialog');
-      button.setAttribute('aria-expanded', 'false');
-      const sync = () => {
-        const value = select.selectedOptions[0]?.textContent || 'Choose…';
-        button.innerHTML = `<span>${esc(value)}</span><svg aria-hidden="true" viewBox="0 0 16 16"><path d="m5 6 3-3 3 3M5 10l3 3 3-3"/></svg>`;
-        button.setAttribute('aria-label', label + ': ' + value);
-        button.disabled = select.disabled;
-      };
-      sync();
-      select.hidden = true;
-      select.after(button);
-      pickerButtons.set(select, button);
-      select.addEventListener('change', () => {
-        select.removeAttribute('aria-invalid');
-        button.removeAttribute('aria-invalid');
-        sync();
-      });
-      button.addEventListener('click', () => openPicker(select, button, label));
-      button.addEventListener('keydown', event => {
-        if (['ArrowDown','ArrowUp'].includes(event.key)) {event.preventDefault();openPicker(select, button, label);}
-      });
-    }
-  }
   function openPicker(select, trigger, label) {
     if (activePicker) return;
-    const id = 'picker-' + ++pickerSerial, dialog = document.createElement('dialog');
-    const searchable = select.options.length > 8;
-    dialog.className = 'picker-window';
-    dialog.id = id;
-    dialog.setAttribute('aria-labelledby', id + '-title');
-    dialog.innerHTML = `<div class="picker-header"><h2 id="${id}-title">${esc(label)}</h2><button type="button" class="picker-close" aria-label="Close selection"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="m6 6 8 8M14 6l-8 8"/></svg></button></div>${searchable ? `<div class="picker-search-wrap"><input class="picker-search" type="search" placeholder="Search options" aria-label="Search ${esc(label.toLowerCase())}" autocomplete="off"></div>` : ''}<div class="picker-options" role="listbox" aria-label="${esc(label)}" tabindex="0"></div>`;
-    document.body.append(dialog);
-    activePicker = dialog;
+    const id = 'picker-' + ++pickerSerial;
+    const host = document.createElement('div');
+    document.body.append(host);
+    mount(
+      host,
+      <UI.FilterPicker id={id} aria-labelledby={id + '-title'}>
+        <PickerContents id={id} label={label} searchable={select.options.length > 8} />
+      </UI.FilterPicker>
+    );
+    const dialog = host.firstElementChild;
     trigger.setAttribute('aria-expanded', 'true');
     trigger.setAttribute('aria-controls', id);
     const list = dialog.querySelector('.picker-options');
     const search = dialog.querySelector('.picker-search');
-    let activeIndex = select.selectedIndex, closing = false;
+    let activeIndex = select.selectedIndex,
+      closing = false;
     const options = [...select.options];
-    const enabled = option => !option.disabled && !option.parentElement.disabled;
+    const enabled = (option) => !option.disabled && !option.parentElement.disabled;
     const visible = () => [...list.querySelectorAll('[role=option]:not([aria-disabled=true])')];
-    const highlight = index => {
+    const highlight = (index) => {
       const item = list.querySelector(`[data-index="${index}"]`);
       list.querySelector('.is-active')?.classList.remove('is-active');
-      if (!item || item.getAttribute('aria-disabled') === 'true') {activeIndex=-1;list.removeAttribute('aria-activedescendant');return;}
+      if (!item || item.getAttribute('aria-disabled') === 'true') {
+        activeIndex = -1;
+        list.removeAttribute('aria-activedescendant');
+        return;
+      }
       activeIndex = index;
       item.classList.add('is-active');
       list.setAttribute('aria-activedescendant', item.id);
-      item.scrollIntoView({block:'nearest'});
+      item.scrollIntoView({ block: 'nearest' });
     };
     const draw = () => {
       const query = (search?.value || '').trim().toLocaleLowerCase();
-      let group = null, html = '', count = 0;
-      options.forEach((option,index) => {
-        const groupName = option.parentElement.tagName === 'OPTGROUP' ? option.parentElement.label : '';
-        if (query && !(option.textContent + ' ' + groupName).toLocaleLowerCase().includes(query)) return;
-        if (group !== groupName) {
-          if (group !== null) html += '</div>';
-          group = groupName;
-          html += `<div role="group"${group ? ` aria-label="${esc(group)}"` : ''}>${group ? `<p class="picker-group" aria-hidden="true">${esc(group)}</p>` : ''}`;
-        }
-        count++;
-        html += `<div id="${id}-option-${index}" class="picker-option" role="option" data-index="${index}" aria-selected="${option.selected}"${enabled(option) ? '' : ' aria-disabled="true"'}><span>${esc(option.textContent)}</span><svg class="picker-check" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 10 3.5 3.5L15 7"/></svg></div>`;
-      });
-      if (group !== null) html += '</div>';
-      list.innerHTML = count ? html : '<p class="picker-empty" role="status">No matching options</p>';
+      mount(list, <PickerChoices options={options} query={query} id={id} />);
       const current = list.querySelector(`[data-index="${activeIndex}"]:not([aria-disabled=true])`);
       highlight(Number((current || visible()[0])?.dataset.index ?? -1));
     };
+    function dismiss() {
+      if (!host.isConnected) return;
+      if (dialog.open) dialog.close();
+      for (const node of [list, host]) {
+        roots.get(node)?.unmount();
+        roots.delete(node);
+      }
+      host.remove();
+      activePicker = null;
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.removeAttribute('aria-controls');
+      if (trigger.isConnected) trigger.focus({ preventScroll: true });
+    }
+    activePicker = dismiss;
     const close = () => {
       if (closing) return;
       closing = true;
       dialog.classList.add('is-closing');
-      const delay = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 140;
-      setTimeout(() => {dialog.close();dialog.remove();if (activePicker === dialog) activePicker = null;trigger.setAttribute('aria-expanded','false');trigger.removeAttribute('aria-controls');if (trigger.isConnected) trigger.focus({preventScroll:true});}, delay);
+      setTimeout(dismiss, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 140);
     };
-    const choose = index => {
+    const choose = (index) => {
       if (closing || !options[index] || !enabled(options[index])) return;
       select.selectedIndex = index;
-      select.dispatchEvent(new Event('change', {bubbles:true}));
+      select.dispatchEvent(new Event('change', { bubbles: true }));
       close();
     };
     dialog.querySelector('.picker-close').addEventListener('click', close);
-    dialog.addEventListener('cancel', event => {event.preventDefault();close();});
-    dialog.addEventListener('keydown', event => {if(event.key==='Escape'){event.preventDefault();close();}});
-    dialog.addEventListener('click', event => {
-      if (event.target === dialog) {const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)close();}
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      close();
     });
-    list.addEventListener('click', event => {const item=event.target.closest('[role=option]');if(item)choose(Number(item.dataset.index));});
-    list.addEventListener('keydown', event => {
-      const items = visible(), current = items.findIndex(item => Number(item.dataset.index) === activeIndex);
+    dialog.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+      }
+    });
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) {
+        const r = dialog.getBoundingClientRect();
+        if (
+          event.clientX < r.left ||
+          event.clientX > r.right ||
+          event.clientY < r.top ||
+          event.clientY > r.bottom
+        )
+          close();
+      }
+    });
+    list.addEventListener('click', (event) => {
+      const item = event.target.closest('[role=option]');
+      if (item) choose(Number(item.dataset.index));
+    });
+    list.addEventListener('keydown', (event) => {
+      const items = visible(),
+        current = items.findIndex((item) => Number(item.dataset.index) === activeIndex);
       let next;
-      if(event.key==='ArrowDown')next=Math.min(current+1,items.length-1);
-      if(event.key==='ArrowUp')next=Math.max(current-1,0);
-      if(event.key==='Home')next=0;
-      if(event.key==='End')next=items.length-1;
-      if(next!==undefined){event.preventDefault();if(items[next])highlight(Number(items[next].dataset.index));}
-      else if(['Enter',' '].includes(event.key)){event.preventDefault();choose(activeIndex);}
-      else if(event.key.length===1&&!event.ctrlKey&&!event.metaKey){const match=items.slice(current+1).concat(items.slice(0,current+1)).find(item=>item.textContent.trim().toLocaleLowerCase().startsWith(event.key.toLocaleLowerCase()));if(match){event.preventDefault();highlight(Number(match.dataset.index));}}
+      if (event.key === 'ArrowDown') next = Math.min(current + 1, items.length - 1);
+      if (event.key === 'ArrowUp') next = Math.max(current - 1, 0);
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = items.length - 1;
+      if (next !== undefined) {
+        event.preventDefault();
+        if (items[next]) highlight(Number(items[next].dataset.index));
+      } else if (['Enter', ' '].includes(event.key)) {
+        event.preventDefault();
+        choose(activeIndex);
+      } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+        const match = items
+          .slice(current + 1)
+          .concat(items.slice(0, current + 1))
+          .find((item) => item.textContent.trim().toLocaleLowerCase().startsWith(event.key.toLocaleLowerCase()));
+        if (match) {
+          event.preventDefault();
+          highlight(Number(match.dataset.index));
+        }
+      }
     });
     search?.addEventListener('input', draw);
-    search?.addEventListener('keydown', event => {
-      if(event.key==='ArrowDown'){event.preventDefault();list.focus();}
-      if(event.key==='Enter'){event.preventDefault();choose(activeIndex);}
+    search?.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        list.focus();
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        choose(activeIndex);
+      }
     });
     dialog.showModal();
     const rect = trigger.getBoundingClientRect();
-    if(innerWidth>620){
-      const width=Math.min(410,Math.max(rect.width,320));
-      dialog.style.width=width+'px';
-      dialog.style.left=Math.max(16,Math.min(innerWidth-width-16,rect.left))+'px';
-      const available=innerHeight-rect.bottom-24;
-      dialog.style.top=(available>=260?rect.bottom+8:Math.max(16,rect.top-Math.min(480,innerHeight-32)-8))+'px';
-      dialog.style.maxHeight=Math.min(480,available>=260?available:innerHeight-32)+'px';
+    if (innerWidth > 620) {
+      const width = Math.min(410, Math.max(rect.width, 320));
+      dialog.style.width = width + 'px';
+      dialog.style.left = Math.max(16, Math.min(innerWidth - width - 16, rect.left)) + 'px';
+      const available = innerHeight - rect.bottom - 24;
+      dialog.style.top =
+        (available >= 260 ? rect.bottom + 8 : Math.max(16, rect.top - Math.min(480, innerHeight - 32) - 8)) +
+        'px';
+      dialog.style.maxHeight = Math.min(480, available >= 260 ? available : innerHeight - 32) + 'px';
     }
     draw();
-    list.focus({preventScroll:true});
+    list.focus({ preventScroll: true });
   }
   function guide() {
-    return `${head('Student sublet guide','A guide to share with your student association, housing group or co-op classmates.')}
-    <div class="layout"><section class="panel guide-copy"><h2>Listing your own place</h2><p>Start with the student check, then add your dates, rent and apartment photos. In the proposed service, Termlet would review the listing before taking on the search. Businesses and third-party agents can’t post through this flow.</p>
-    <h2>Looking for a room</h2><p>Pick your campus, term and monthly budget. Open the listing to compare rooms, check the full-term cost and request the dates. Student status is only one check. Confirm the person has permission to sublet and review the written terms before sending money.</p>
-    <div class="actions">${link('browse','Find a sublet')}${link('list','List my place',true)}</div></section>
-    <aside class="panel side"><h2>Campus housing resources</h2><ul class="resource-links"><li><a href="https://wusa.ca/advocacy/housing-playbook/" target="_blank" rel="noopener">WUSA Housing Playbook <span class="arrow" aria-hidden="true">↗</span></a></li><li><a href="https://offcampushousing.utoronto.ca/" target="_blank" rel="noopener">U of T Off-Campus Housing <span class="arrow" aria-hidden="true">↗</span></a></li><li><a href="https://www.torontomu.ca/housing/housing-alternatives/off-campus/resources/" target="_blank" rel="noopener">TMU off-campus housing resources <span class="arrow" aria-hidden="true">↗</span></a></li></ul>
-    <h2>Share with students</h2><p>Use this guide link in a club newsletter, student group or campus housing resource list.</p>${act('share-guide','Copy guide link',true)}<p id="share-result" role="status" class="help"></p></aside></div>`;
+    return (
+      <>
+        {head(
+          'Student sublet guide',
+          'A guide to share with your student association, housing group or co-op classmates.'
+        )}
+        <UI.Columns>
+          <UI.GuideCopy>
+            <UI.Heading>Listing your own place</UI.Heading>
+            <UI.Text>
+              Start with the student check, then add your dates, rent and apartment photos. In the proposed
+              service, Termlet would review the listing before taking on the search. Businesses and third-party
+              agents can’t post through this flow.
+            </UI.Text>
+            <UI.Heading>Looking for a room</UI.Heading>
+            <UI.Text>
+              Pick your campus, term and monthly budget. Open the listing to compare rooms, check the full-term
+              cost and request the dates. Student status is only one check. Confirm the person has permission to
+              sublet and review the written terms before sending money.
+            </UI.Text>
+            <UI.Actions>
+              {link('browse', 'Find a sublet')}
+              {link('list', 'List my place', true)}
+            </UI.Actions>
+          </UI.GuideCopy>
+          <UI.Side as="aside">
+            <UI.Heading>Campus housing resources</UI.Heading>
+            <UI.ResourceLinks as="ul">
+              <li>
+                <UI.Link href="https://wusa.ca/advocacy/housing-playbook/" target="_blank" rel="noopener">
+                  WUSA Housing Playbook <UI.Arrow aria-hidden="true">↗</UI.Arrow>
+                </UI.Link>
+              </li>
+              <li>
+                <UI.Link href="https://offcampushousing.utoronto.ca/" target="_blank" rel="noopener">
+                  U of T Off-Campus Housing <UI.Arrow aria-hidden="true">↗</UI.Arrow>
+                </UI.Link>
+              </li>
+              <li>
+                <UI.Link
+                  href="https://www.torontomu.ca/housing/housing-alternatives/off-campus/resources/"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  TMU off-campus housing resources <UI.Arrow aria-hidden="true">↗</UI.Arrow>
+                </UI.Link>
+              </li>
+            </UI.ResourceLinks>
+            <UI.Heading>Share with students</UI.Heading>
+            <UI.Text>
+              Use this guide link in a club newsletter, student group or campus housing resource list.
+            </UI.Text>
+            {act('share-guide', 'Copy guide link', true)}
+            <UI.Help id="share-result" role="status" />
+          </UI.Side>
+        </UI.Columns>
+      </>
+    );
   }
   function photosFor(key,room) {
     if(key==='own') return storedPhotos(room).map((src,i)=>({src:mediaUrl(src),label:'Photo '+(i+1),alt:'Submitted apartment photo '+(i+1)}));
@@ -363,7 +509,14 @@ export function startMarketplace(){
     });
   }
   function previewPhotos() {
-    return newPhotos.map((src,i)=>`<div class="upload-thumb"><img src="${esc(mediaUrl(src))}" alt="Selected apartment photo ${i+1}"><button type="button" data-remove-photo="${i}" aria-label="Remove photo ${i+1}">Remove</button></div>`).join('');
+    return newPhotos.map((src, i) => (
+      <UI.UploadThumb key={i}>
+        <UI.Image src={mediaUrl(src)} alt={'Selected apartment photo ' + (i + 1)} />
+        <UI.Button type="button" data-remove-photo={i} aria-label={'Remove photo ' + (i + 1)}>
+          Remove
+        </UI.Button>
+      </UI.UploadThumb>
+    ));
   }
   async function compressPhoto(file) {
     const url=URL.createObjectURL(file),img=new Image();
@@ -382,7 +535,46 @@ export function startMarketplace(){
   const documentNames={lease:'Original signed lease',permission:'Permission to sublet (optional)',agreement:'Signed sublet agreement'};
   let draftDocuments={},documentUrls=new Map();
   model.stays ||= {};
-  function householdFields(l){return `<fieldset class="household-fields wide"><legend>People &amp; household</legend><p class="help">Optional details shown on your listing. Describe the people sharing the space, not who is allowed to apply.</p><div class="fields"><label>Your gender<select name="gender">${Object.entries(genderOptions).map(([v,t])=>option(v,t,l.gender||'')).join('')}</select></label><label>Household composition<select name="household">${Object.entries(householdOptions).map(([v,t])=>option(v,t,l.household||'')).join('')}</select></label><label class="self-description gender-description" ${l.gender==='self'?'':'hidden'}>Your gender description<input name="genderText" maxlength="60" value="${esc(l.genderText||'')}"></label><label class="self-description household-description" ${l.household==='self'?'':'hidden'}>Household description<input name="householdText" maxlength="80" value="${esc(l.householdText||'')}"></label><label>Roommates during the sublet<select name="roommates">${option('','Not shared',String(l.roommates??''))}${Array.from({length:9},(_,i)=>option(String(i),i===0?'No other roommates':String(i),String(l.roommates??''))).join('')}</select></label></div></fieldset>`;}
+  function householdFields(l) {
+    return (
+      <UI.HouseholdFields className="wide">
+        <UI.Label as="legend">People &amp; household</UI.Label>
+        <UI.Help>
+          Optional details shown on your listing. Describe the people sharing the space, not who is allowed to
+          apply.
+        </UI.Help>
+        <UI.Fields>
+          <UI.Label>
+            Your gender
+            <MarketSelect name="gender" defaultValue={l.gender || ''}>
+              {Object.entries(genderOptions).map(([v, t]) => option(v, t))}
+            </MarketSelect>
+          </UI.Label>
+          <UI.Label>
+            Household composition
+            <MarketSelect name="household" defaultValue={l.household || ''}>
+              {Object.entries(householdOptions).map(([v, t]) => option(v, t))}
+            </MarketSelect>
+          </UI.Label>
+          <UI.SelfDescription className="gender-description" hidden={l.gender !== 'self'}>
+            Your gender description
+            <UI.Field name="genderText" maxLength="60" defaultValue={l.genderText || ''} />
+          </UI.SelfDescription>
+          <UI.SelfDescription className="household-description" hidden={l.household !== 'self'}>
+            Household description
+            <UI.Field name="householdText" maxLength="80" defaultValue={l.householdText || ''} />
+          </UI.SelfDescription>
+          <UI.Label>
+            Roommates during the sublet
+            <MarketSelect name="roommates" defaultValue={String(l.roommates ?? '')}>
+              {option('', 'Not shared')}
+              {Array.from({ length: 9 }, (_, i) => option(String(i), i === 0 ? 'No other roommates' : String(i)))}
+            </MarketSelect>
+          </UI.Label>
+        </UI.Fields>
+      </UI.HouseholdFields>
+    );
+  }
   function householdLabel(l){return l.household==='self'?l.householdText||'Not shared':householdOptions[l.household]||'Not shared';}
   function householdSummary(l){return householdLabel(l)+(l.roommates!==''&&l.roommates!=null&&Number(l.roommates)>0?' · '+l.roommates+' '+(Number(l.roommates)===1?'roommate':'roommates'):'');}
   function demoHousehold(key,l){
@@ -391,11 +583,82 @@ export function startMarketplace(){
     if(l.type==='Private room')return {gender:'woman',household:'women',roommates:'2'};
     return {gender:'',household:'none',roommates:'0'};
   }
-  function householdDetails(l){return `<section class="household-details"><h3>People &amp; household</h3>${row('Lister gender',l.gender==='self'?l.genderText||'Not shared':genderOptions[l.gender]||'Not shared')}${row('Household',householdLabel(l))}${row('Other roommates',l.roommates===''||l.roommates==null?'Not shared':String(l.roommates))}</section>`;}
+  function householdDetails(l) {
+    return (
+      <UI.HouseholdDetails>
+        <UI.Heading as="h3">People &amp; household</UI.Heading>
+        {row(
+          'Lister gender',
+          l.gender === 'self' ? l.genderText || 'Not shared' : genderOptions[l.gender] || 'Not shared'
+        )}
+        {row('Household', householdLabel(l))}
+        {row('Other roommates', l.roommates === '' || l.roommates == null ? 'Not shared' : String(l.roommates))}
+      </UI.HouseholdDetails>
+    );
+  }
   function docsFor(scope){if(scope==='draft')return draftDocuments;if(scope==='owner')return model.listing.documents ||= {};return model.stays[scope.slice(5)].documents ||= {};}
-  function documentList(scope){return Object.entries(docsFor(scope)).map(([kind,d])=>`<div class="document-item"><div><strong>${esc(documentNames[kind])}</strong><span>${esc(d.name)} · ${d.sample?'Sample document':Math.max(1,Math.round(d.size/1024))+' KB'}</span></div><div>${documentUrls.has(d.previewId)?`<a class="inline" href="${esc(documentUrls.get(d.previewId))}" target="_blank" rel="noopener">Preview</a>`:''}<button class="plain-button" type="button" data-remove-doc="${kind}" data-scope="${esc(scope)}"${documentLocked(scope,kind)?' hidden':''}>Remove</button></div></div>`).join('')||'<p class="help">No documents added yet.</p>';}
-  function documentPanel(scope,kinds){return `<section class="document-panel ${scope==='draft'?'wide':'panel'}"><h3>Lease documents</h3><p class="help">Use sample documents or fictional PDF, JPG or PNG files, up to 10 MB each. File contents stay in this tab; only filenames and demo status are saved.</p><div class="document-inputs">${kinds.map(kind=>`<div><label>${documentNames[kind]}<input type="file" accept=".pdf,.jpg,.jpeg,.png" data-document="${kind}" data-scope="${esc(scope)}"></label><button class="plain-button" type="button" data-sample-doc="${kind}" data-scope="${esc(scope)}">Use sample ${kind==='agreement'?'signed agreement':kind==='permission'?'permission':'lease'}</button></div>`).join('')}</div><div class="document-list" data-doc-list="${esc(scope)}">${documentList(scope)}</div><p class="error" role="alert" data-doc-error="${esc(scope)}"></p></section>`;}
-  function refreshDocuments(scope){const box=main.querySelector(`[data-doc-list="${scope}"]`);if(box)box.innerHTML=documentList(scope);if(scope!=='draft')save();}
+  function documentList(scope) {
+    const docs = Object.entries(docsFor(scope));
+    return docs.length ? (
+      docs.map(([kind, d]) => (
+        <UI.DocumentItem key={kind}>
+          <div>
+            <strong>{documentNames[kind]}</strong>
+            <span>
+              {d.name} · {d.sample ? 'Sample document' : Math.max(1, Math.round(d.size / 1024)) + ' KB'}
+            </span>
+          </div>
+          <div>
+            {documentUrls.has(d.previewId) ? (
+              <UI.Inline href={documentUrls.get(d.previewId)} target="_blank" rel="noopener">
+                Preview
+              </UI.Inline>
+            ) : (
+              ''
+            )}
+            <UI.DocumentButton
+              type="button"
+              data-remove-doc={kind}
+              data-scope={scope}
+              hidden={documentLocked(scope, kind)}
+            >
+              Remove
+            </UI.DocumentButton>
+          </div>
+        </UI.DocumentItem>
+      ))
+    ) : (
+      <UI.Help>No documents added yet.</UI.Help>
+    );
+  }
+  function documentPanel(scope, kinds) {
+    return (
+      <UI.DocumentPanel className={scope === 'draft' ? 'wide' : 'panel'}>
+        <UI.Heading as="h3">Lease documents</UI.Heading>
+        <UI.Help>
+          Use sample documents or fictional PDF, JPG or PNG files, up to 10 MB each. File contents stay in this
+          tab; only filenames and demo status are saved.
+        </UI.Help>
+        <UI.DocumentInputs>
+          {kinds.map((kind) => (
+            <div key={kind}>
+              <UI.Label>
+                {documentNames[kind]}
+                <UI.FileField type="file" accept=".pdf,.jpg,.jpeg,.png" data-document={kind} data-scope={scope} />
+              </UI.Label>
+              <UI.DocumentButton type="button" data-sample-doc={kind} data-scope={scope}>
+                Use sample{' '}
+                {kind === 'agreement' ? 'signed agreement' : kind === 'permission' ? 'permission' : 'lease'}
+              </UI.DocumentButton>
+            </div>
+          ))}
+        </UI.DocumentInputs>
+        <UI.DocumentList data-doc-list={scope}>{examplesOnly && documentList(scope)}</UI.DocumentList>
+        <UI.Error role="alert" data-doc-error={scope} />
+      </UI.DocumentPanel>
+    );
+  }
+  function refreshDocuments(scope){const box=main.querySelector(`[data-doc-list="${scope}"]`);if(box)mount(box,documentList(scope));if(scope!=='draft')save();}
   function documentLocked(scope,kind){return scope==='owner'&&kind==='lease'&&model.listing.status!=='review'||scope.startsWith('stay:')&&kind==='agreement'&&model.stays[scope.slice(5)].status==='active';}
   function handleDocument(input){
     const file=input.files?.[0];if(!file)return;
@@ -409,55 +672,511 @@ export function startMarketplace(){
   function monthKey(start,offset){const n=numMonth(start)+offset;return Math.floor(n/12)+'-'+String(n%12+1).padStart(2,'0');}
   const dueDate = key => new Date(Number(key.slice(0,4)),Number(key.slice(5))-1,1).toLocaleDateString('en-CA',{day:'numeric',month:'short',year:'numeric'});
   function ownerBills(l){return Array.from({length:duration(l)},(_,i)=>{const key=monthKey(l.start,i),vacant=i<l.vacant,matched=l.status==='matched'&&!vacant;const support=vacant?roundMonth(l.rent,coverage):0,net=matched?cents(l.ask-roundMonth(l.ask,rateFor(l))):0;const balance=cents(l.rent-support-net),paid=l.payments?.[key]?.amount||0;return {key,amount:Math.max(0,balance),credit:Math.max(0,cents(paid-balance)),paid,confirmed:vacant||matched,kind:vacant?'Vacancy support applied':matched?'Net sublet rent scheduled':'Projected · search active'};});}
-  function ownerPayments(l){
-    const bills=ownerBills(l),confirmed=bills.filter(b=>b.confirmed),paid=cents(bills.reduce((s,b)=>s+b.paid,0)),outstanding=cents(confirmed.reduce((s,b)=>s+Math.max(0,b.amount-b.paid),0)),next=confirmed.find(b=>b.paid<b.amount);
-    return `<section class="panel payments-panel"><div class="section-head"><div><div class="kicker">Leaseholder portal</div><h2>Your payments through Termlet</h2></div><span class="pill">Demo payments</span></div><div class="portal-metrics">${metric('Confirmed balance remaining',money(outstanding))}${metric('Paid in this demo',money(paid))}${metric('Next payment',next?dueDate(next.key):confirmed.length?'No payment pending':'Awaiting a confirmed bill')}</div><p class="help">Monthly due dates are the first of each month in this example. Your balance is lease rent minus net subtenant rent or vacancy support. Projected months update when a match or vacant month is confirmed.</p><div data-bills="owner"></div><p class="help">Termlet would coordinate the lease payment. These buttons record simulated payments only.</p></section>`;
+  function ownerPayments(l) {
+    const bills = ownerBills(l),
+      confirmed = bills.filter((b) => b.confirmed),
+      paid = cents(bills.reduce((s, b) => s + b.paid, 0)),
+      outstanding = cents(confirmed.reduce((s, b) => s + Math.max(0, b.amount - b.paid), 0)),
+      next = confirmed.find((b) => b.paid < b.amount);
+    return (
+      <UI.PaymentsPanel>
+        <UI.SectionHead as="div">
+          <div>
+            <UI.Kicker as="div">Leaseholder portal</UI.Kicker>
+            <UI.Heading>Your payments through Termlet</UI.Heading>
+          </div>
+          <UI.Pill>Demo payments</UI.Pill>
+        </UI.SectionHead>
+        <UI.PortalMetrics as="div">
+          {metric('Confirmed balance remaining', money(outstanding))}
+          {metric('Paid in this demo', money(paid))}
+          {metric(
+            'Next payment',
+            next ? dueDate(next.key) : confirmed.length ? 'No payment pending' : 'Awaiting a confirmed bill'
+          )}
+        </UI.PortalMetrics>
+        <UI.Help>
+          Monthly due dates are the first of each month in this example. Your balance is lease rent minus net
+          subtenant rent or vacancy support. Projected months update when a match or vacant month is confirmed.
+        </UI.Help>
+        <div data-bills="owner" />
+        <UI.Help>
+          Termlet would coordinate the lease payment. These buttons record simulated payments only.
+        </UI.Help>
+      </UI.PaymentsPanel>
+    );
   }
-  const metric=(label,value)=>`<div><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
+  const metric = (label, value) => (
+    <UI.Metric>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </UI.Metric>
+  );
   function stayBills(s){return Array.from({length:duration(s.listing)},(_,i)=>{const key=monthKey(s.listing.start,i);return {key,amount:s.listing.ask,paid:s.payments?.[key]?.amount||0,confirmed:s.status==='active'};});}
-  function stays(){const entries=Object.entries(model.stays);return head('My stay','Your applications, agreements and rent payments in one place.')+(entries.length?`<div class="stay-cards">${entries.map(([key,s])=>`<section class="panel"><span class="pill">${s.status==='active'?'Active sublet':s.status==='agreement'?'Approved · Agreement needed':'Application in review'}</span><h2>${esc(s.listing.title)}</h2><p>${esc(monthName(s.listing.start))} – ${esc(monthName(s.listing.end))} · ${money(s.listing.ask)} / month</p>${link('stay/'+key,'Open my stay')}</section>`).join('')}</div>`:`<section class="empty"><h2>No applications yet</h2><p>Choose a room and request its listed dates to start.</p>${link('browse','Find a sublet')}</section>`);}
-  function stayPortal(key){
-    const s=model.stays[key];if(!s)return stays();const l=s.listing,bills=stayBills(s),paid=cents(bills.reduce((sum,b)=>sum+b.paid,0)),remaining=cents(l.ask*duration(l)-paid),next=bills.find(b=>b.paid<b.amount);
-    const state=s.status==='active'?'Active sublet':s.status==='agreement'?'Application approved':'Application in review';
-    return `${head('My stay',l.title,'stays','All my stays')}<div class="layout"><div><section class="panel"><span class="pill">${state}</span><h2 class="portal-title">${s.status==='review'?'Your request is being reviewed':s.status==='agreement'?'Your room is approved':'You’re ready for your stay'}</h2><div class="stage"><strong>Request sent</strong><small>${esc(monthName(l.start))} – ${esc(monthName(l.end))}, at ${money(l.ask)} per month.</small></div><div class="stage"><strong>${s.status==='review'?'Review pending':'Review approved'}</strong><small>Identity, dates and the sublet arrangement would be checked.</small></div><div class="stage"><strong>${s.status==='active'?'Signed agreement added':'Signed agreement needed'}</strong><small>The payment schedule opens after the agreement is added.</small></div>${s.status==='review'?`<div class="actions">${act('stay-approve-'+key,'Simulate approval')}${act('stay-withdraw-'+key,'Withdraw application',true)}</div>`:s.status==='agreement'?`<div class="actions">${act('stay-activate-'+key,'Confirm signed agreement')}</div><p class="error" role="alert" id="stay-error"></p>`:''}</section>${documentPanel('stay:'+key,['agreement'])}<section class="panel"><h3>About your household</h3><p>${esc(householdSummary(l))}</p></section></div><aside class="panel side"><div class="kicker">Renter portal</div><h2>Your rent</h2>${row('Monthly rent paid to Termlet',money(l.ask))}${row('Term dates',monthName(l.start)+' – '+monthName(l.end))}${row('Total rent for the term',money(cents(l.ask*duration(l))))}${row('Paid in this demo',money(paid))}${row(s.status==='active'?'Remaining scheduled rent':'Projected term balance',money(remaining),true)}${row('Next payment date',s.status==='active'&&next?dueDate(next.key):s.status==='active'?'All paid':'After signed agreement')}<p class="help mini">The leaseholder’s service fee is deducted from their proceeds. It is not added to your rent. Payments here are simulated.</p></aside></div><section class="panel payments-panel"><h2>Monthly payment schedule</h2><p class="help">For this demo, rent is due on the first of each month. Payment buttons unlock when your signed agreement is confirmed.</p><div data-bills="stay:${esc(key)}"></div></section>`;
+  function stays() {
+    const entries = Object.entries(model.stays);
+    return (
+      <>
+        {head('My stay', 'Your applications, agreements and rent payments in one place.')}
+        {entries.length ? (
+          <UI.StayCards>
+            {entries.map(([key, s]) => (
+              <UI.Panel key={key}>
+                <UI.Pill>
+                  {s.status === 'active'
+                    ? 'Active sublet'
+                    : s.status === 'agreement'
+                      ? 'Approved · Agreement needed'
+                      : 'Application in review'}
+                </UI.Pill>
+                <UI.Heading>{s.listing.title}</UI.Heading>
+                <UI.Text>
+                  {monthName(s.listing.start)} – {monthName(s.listing.end)} · {money(s.listing.ask)} / month
+                </UI.Text>
+                {link('stay/' + key, 'Open my stay')}
+              </UI.Panel>
+            ))}
+          </UI.StayCards>
+        ) : (
+          <UI.Empty>
+            <UI.Heading>No applications yet</UI.Heading>
+            <UI.Text>Choose a room and request its listed dates to start.</UI.Text>
+            {link('browse', 'Find a sublet')}
+          </UI.Empty>
+        )}
+      </>
+    );
+  }
+  function stayPortal(key) {
+    const s = model.stays[key];
+    if (!s) return stays();
+    const l = s.listing,
+      bills = stayBills(s),
+      paid = cents(bills.reduce((sum, b) => sum + b.paid, 0)),
+      remaining = cents(l.ask * duration(l) - paid),
+      next = bills.find((b) => b.paid < b.amount);
+    const state =
+      s.status === 'active'
+        ? 'Active sublet'
+        : s.status === 'agreement'
+          ? 'Application approved'
+          : 'Application in review';
+    return (
+      <>
+        {head('My stay', l.title, 'stays', 'All my stays')}
+        <UI.Columns>
+          <div>
+            <UI.Panel>
+              <UI.Pill>{state}</UI.Pill>
+              <UI.PortalTitle as="h2">
+                {s.status === 'review'
+                  ? 'Your request is being reviewed'
+                  : s.status === 'agreement'
+                    ? 'Your room is approved'
+                    : 'You’re ready for your stay'}
+              </UI.PortalTitle>
+              <UI.Stage>
+                <strong>Request sent</strong>
+                <UI.Text as="small">
+                  {monthName(l.start)} – {monthName(l.end)}, at {money(l.ask)} per month.
+                </UI.Text>
+              </UI.Stage>
+              <UI.Stage>
+                <strong>{s.status === 'review' ? 'Review pending' : 'Review approved'}</strong>
+                <UI.Text as="small">Identity, dates and the sublet arrangement would be checked.</UI.Text>
+              </UI.Stage>
+              <UI.Stage>
+                <strong>{s.status === 'active' ? 'Signed agreement added' : 'Signed agreement needed'}</strong>
+                <UI.Text as="small">The payment schedule opens after the agreement is added.</UI.Text>
+              </UI.Stage>
+              {s.status === 'review' ? (
+                <UI.Actions>
+                  {act('stay-approve-' + key, 'Simulate approval')}
+                  {act('stay-withdraw-' + key, 'Withdraw application', true)}
+                </UI.Actions>
+              ) : s.status === 'agreement' ? (
+                <>
+                  <UI.Actions>{act('stay-activate-' + key, 'Confirm signed agreement')}</UI.Actions>
+                  <UI.Error role="alert" id="stay-error" />
+                </>
+              ) : (
+                ''
+              )}
+            </UI.Panel>
+            {documentPanel('stay:' + key, ['agreement'])}
+            <UI.Panel>
+              <UI.Heading as="h3">About your household</UI.Heading>
+              <UI.Text>{householdSummary(l)}</UI.Text>
+            </UI.Panel>
+          </div>
+          <UI.Side as="aside">
+            <UI.Kicker as="div">Renter portal</UI.Kicker>
+            <UI.Heading>Your rent</UI.Heading>
+            {row('Monthly rent paid to Termlet', money(l.ask))}
+            {row('Term dates', monthName(l.start) + ' – ' + monthName(l.end))}
+            {row('Total rent for the term', money(cents(l.ask * duration(l))))}
+            {row('Paid in this demo', money(paid))}
+            {row(
+              s.status === 'active' ? 'Remaining scheduled rent' : 'Projected term balance',
+              money(remaining),
+              true
+            )}
+            {row(
+              'Next payment date',
+              s.status === 'active' && next
+                ? dueDate(next.key)
+                : s.status === 'active'
+                  ? 'All paid'
+                  : 'After signed agreement'
+            )}
+            <UI.Help className="mini">
+              The leaseholder’s service fee is deducted from their proceeds. It is not added to your rent.
+              Payments here are simulated.
+            </UI.Help>
+          </UI.Side>
+        </UI.Columns>
+        <UI.PaymentsPanel>
+          <UI.Heading>Monthly payment schedule</UI.Heading>
+          <UI.Help>
+            For this demo, rent is due on the first of each month. Payment buttons unlock when your signed
+            agreement is confirmed.
+          </UI.Help>
+          <div data-bills={'stay:' + key} />
+        </UI.PaymentsPanel>
+      </>
+    );
   }
   function newStay(key,l){model.stays[key]={listing:{...l,start:monthKey(l.start,l.vacant),vacant:0},status:'review',documents:{},payments:{}};}
 
   function promotionChoices(l) {
-    const selected = Object.hasOwn(promotionPlans,l.promotion) ? l.promotion : 'standard';
-    return `<fieldset class="promotion-options wide"><legend>Choose your reach</legend><p class="help">Optional promotion. These are total fees, including the standard service fee, charged only on rent collected.</p><div class="promotion-grid">${Object.entries(promotionPlans).map(([key,plan])=>`<label class="promotion-card"><input type="radio" name="promotion" value="${key}"${key===selected?' checked':''}><span><strong>${plan.name}</strong><b>${percent(plan.rate)} <small>total fee</small></b><span class="promotion-detail">${plan.detail}</span><span class="promotion-cost" data-plan-cost="${key}"></span></span></label>`).join('')}</div><p class="help">Sponsored spaces are shared and clearly labelled. Promotion does not guarantee views or a match. Vacancy support stays at 10% for every plan. Demo rates; no real charges.</p></fieldset>`;
+    const selected = Object.hasOwn(promotionPlans, l.promotion) ? l.promotion : 'standard';
+    return (
+      <UI.PromotionOptions className="wide">
+        <UI.Label as="legend">Choose your reach</UI.Label>
+        <UI.Help>
+          Optional promotion. These are total fees, including the standard service fee, charged only on rent
+          collected.
+        </UI.Help>
+        <UI.PromotionGrid>
+          {Object.entries(promotionPlans).map(([key, plan]) => (
+            <UI.PromotionCard key={key}>
+              <UI.Field type="radio" name="promotion" value={key} defaultChecked={key === selected} />
+              <span>
+                <strong>{plan.name}</strong>
+                <b>
+                  {percent(plan.rate)} <UI.Text as="small">total fee</UI.Text>
+                </b>
+                <UI.PromotionDetail as="span">{plan.detail}</UI.PromotionDetail>
+                <UI.PromotionCost as="span" data-plan-cost={key} />
+              </span>
+            </UI.PromotionCard>
+          ))}
+        </UI.PromotionGrid>
+        <UI.Help>
+          Sponsored spaces are shared and clearly labelled. Promotion does not guarantee views or a match. Vacancy
+          support stays at 10% for every plan. Demo rates; no real charges.
+        </UI.Help>
+      </UI.PromotionOptions>
+    );
   }
   function sponsoredFirst(entries) {
     const slots=entries.filter(([,l])=>promotionFor(l).rank>0).sort((a,b)=>promotionFor(b[1]).rank-promotionFor(a[1]).rank).slice(0,2);
     const selected=new Set(slots.map(([key])=>key));
     return [...slots,...entries.filter(([key])=>!selected.has(key))];
   }
-  const sponsorBadge = l => promotionFor(l).rank ? `<span class="sponsor-badge">Sponsored · ${promotionFor(l).name}</span>` : '';
+  const sponsorBadge = (l) =>
+    promotionFor(l).rank ? <UI.SponsorBadge>Sponsored · {promotionFor(l).name}</UI.SponsorBadge> : null;
   function home() {
     const entries = Object.entries(listings());
     const [id, room] = entries.find(([,room])=>promotionFor(room).rank === 2) || ['sample',listings().sample];
     const spotlight = { item: cardItem([id,room]), picture: photosFor(id,room)[0] };
     return <Home hasListing={!!model.listing} spotlight={spotlight} cards={sponsoredFirst(entries).slice(0,3).map(cardItem)}/>;
   }
-  function list(){
-    const l=model.listing||{...sample,title:'',photo:''};
-    newPhotos=storedPhotos(l);draftDocuments={...(l.documents||{})};photoPending=false;photoJob++;
-    return `${head('List your place','Tell us what you’re leaving behind for the term. Use fictional details to try the review process.')}<div class="layout"><form id="listing-form" class="panel" novalidate><p class="student-status">✓ Student status confirmed · Demo</p><h2>Apartment details</h2><div class="fields"><label class="wide">Listing title<input name="title" value="${esc(l.title)}" required maxlength="70" placeholder="e.g. Sunny room near campus"></label><label class="wide">Nearby campus<select name="campus">${campusOptions(l.campus,false)}</select></label><label class="wide">Place type<select name="type">${['Private room','Entire studio','Entire apartment'].map(type=>option(type,type,l.type)).join('')}</select></label><label>Lease rent / month (CAD)<input name="rent" type="number" min="1" max="20000" step=".01" required value="${l.rent}"></label><label>Sublet asking rent / month (CAD)<input name="ask" type="number" min="1" max="20000" step=".01" required value="${l.ask}"></label>${listingMonthField('start','First month away',l.start)}${listingMonthField('end','Last month away',l.end)}${householdFields(l)}${promotionChoices(l)}${documentPanel('draft',['lease','permission'])}<div class="wide"><label>Apartment photos<input name="photo" type="file" multiple accept="image/jpeg,image/png,image/webp"></label><p class="help">Add up to six images. Your first photo is the cover. For this demo, you can use the four sample photos below.</p><button class="plain-button photo-choice" type="button" data-act="photo">Use sample apartment photos</button><div id="photo-preview" class="photo-preview">${previewPhotos()}</div></div></div><p class="error" id="form-error" role="alert"></p><div class="actions"><button type="submit" class="btn">Send for review <span class="arrow" aria-hidden="true">→</span></button></div></form><aside class="panel side"><h2>After you list</h2><div class="step"><strong>We review the apartment</strong><p>Your photos, dates and rent go together for review.</p></div><div class="step"><strong>We handle the search</strong><p>Once approved, the listing becomes available to students looking near your university.</p></div><div class="step"><strong>You can follow the money</strong><p>Your dashboard shows rent still owed whether the place is vacant or matched.</p></div>${rentPreview()}</aside></div>`}
-  function empty(){return head('My listing','Track approval, the search and your rent in one place.')+`<div class="empty"><h2>No listing yet</h2><p>Start with an apartment, a photo and your months away.</p>${link('list','List my place')}</div>`}
+  function list() {
+    const l = model.listing || { ...sample, title: '', photo: '' };
+    newPhotos = storedPhotos(l);
+    draftDocuments = { ...(l.documents || {}) };
+    photoPending = false;
+    photoJob++;
+    return (
+      <>
+        {head(
+          'List your place',
+          'Tell us what you’re leaving behind for the term. Use fictional details to try the review process.'
+        )}
+        <UI.Columns>
+          <UI.Panel as="form" id="listing-form" noValidate>
+            <UI.StudentStatus as="p">✓ Student status confirmed · Demo</UI.StudentStatus>
+            <UI.Heading>Apartment details</UI.Heading>
+            <UI.Fields>
+              <UI.Label className="wide">
+                Listing title
+                <UI.Field
+                  name="title"
+                  defaultValue={l.title}
+                  required
+                  maxLength="70"
+                  placeholder="e.g. Sunny room near campus"
+                />
+              </UI.Label>
+              <UI.Label className="wide">
+                Nearby campus
+                <MarketSelect name="campus" defaultValue={l.campus}>
+                  {campusOptions()}
+                </MarketSelect>
+              </UI.Label>
+              <UI.Label className="wide">
+                Place type
+                <MarketSelect name="type" defaultValue={l.type}>
+                  {['Private room', 'Entire studio', 'Entire apartment'].map((type) => option(type, type))}
+                </MarketSelect>
+              </UI.Label>
+              <UI.Label>
+                Lease rent / month (CAD)
+                <UI.NumberField
+                  name="rent"
+                  type="number"
+                  min="1"
+                  max="20000"
+                  step=".01"
+                  required
+                  defaultValue={l.rent}
+                />
+              </UI.Label>
+              <UI.Label>
+                Sublet asking rent / month (CAD)
+                <UI.NumberField
+                  name="ask"
+                  type="number"
+                  min="1"
+                  max="20000"
+                  step=".01"
+                  required
+                  defaultValue={l.ask}
+                />
+              </UI.Label>
+              {listingMonthField('start', 'First month away', l.start)}
+              {listingMonthField('end', 'Last month away', l.end)}
+              {householdFields(l)}
+              {promotionChoices(l)}
+              {documentPanel('draft', ['lease', 'permission'])}
+              <div className="wide">
+                <UI.Label>
+                  Apartment photos
+                  <UI.FileField name="photo" type="file" multiple accept="image/jpeg,image/png,image/webp" />
+                </UI.Label>
+                <UI.Help>
+                  Add up to six images. Your first photo is the cover. For this demo, you can use the four sample
+                  photos below.
+                </UI.Help>
+                <UI.PhotoChoice type="button" data-act="photo">
+                  Use sample apartment photos
+                </UI.PhotoChoice>
+                <UI.PhotoPreview id="photo-preview">{examplesOnly && previewPhotos()}</UI.PhotoPreview>
+              </div>
+            </UI.Fields>
+            <UI.Error id="form-error" role="alert" />
+            <UI.Actions>
+              <UI.PrimaryButton type="submit">
+                Send for review <UI.Arrow aria-hidden="true">→</UI.Arrow>
+              </UI.PrimaryButton>
+            </UI.Actions>
+          </UI.Panel>
+          <UI.Side as="aside">
+            <UI.Heading>After you list</UI.Heading>
+            <UI.Step>
+              <strong>We review the apartment</strong>
+              <UI.Text>Your photos, dates and rent go together for review.</UI.Text>
+            </UI.Step>
+            <UI.Step>
+              <strong>We handle the search</strong>
+              <UI.Text>
+                Once approved, the listing becomes available to students looking near your university.
+              </UI.Text>
+            </UI.Step>
+            <UI.Step>
+              <strong>You can follow the money</strong>
+              <UI.Text>Your dashboard shows rent still owed whether the place is vacant or matched.</UI.Text>
+            </UI.Step>
+            {rentPreview()}
+          </UI.Side>
+        </UI.Columns>
+      </>
+    );
+  }
+  function empty() {
+    return (
+      <>
+        {head('My listing', 'Track approval, the search and your rent in one place.')}
+        {
+          <UI.Empty as="div">
+            <UI.Heading>No listing yet</UI.Heading>
+            <UI.Text>Start with an apartment, a photo and your months away.</UI.Text>
+            {link('list', 'List my place')}
+          </UI.Empty>
+        }
+      </>
+    );
+  }
   const statuses={review:'Awaiting review',active:'Approved · Searching',away:'Moved out · Searching',matched:'Subtenant matched',ended:'Term ended'};
-  function dashboard(){
-    const l=model.listing;if(!l)return empty();
-    const total=duration(l),left=total-l.vacant,matched=l.status==='matched',remainingIncome=matched?cents((l.ask-roundMonth(l.ask,rateFor(l)))*left):0;
-    const support=cents(roundMonth(l.rent,coverage)*l.vacant),base=cents(l.rent*total),potential=cents(base-support-remainingIncome);
-    const events=[['Sent for review','Your photos, dates and rent are in the application.']];
-    if(l.status!=='review')events.push(['Listing approved','Termlet took over the search. The listing is available to prospective subtenants while the search is active.']);
-    if(l.moved)events.push(['Move-out date reached','The search continued after Alex moved away.']);
-    if(l.vacant)events.push([`${l.vacant} fully vacant ${l.vacant===1?'month':'months'}`,`${money(support)} in total vacancy support for ${l.vacant===1?monthName(l.start):monthName(l.start)+' – '+monthName(l.start,l.vacant-1)}.`]);
-    if(matched)events.push(['Subtenant matched',`The demo match covers ${monthName(l.start,l.vacant)} through ${monthName(l.end)} at ${money(l.ask)}/month.`]);
-    if(l.status==='ended')events.push(['Term ended','The search has finished for these dates.']);
-    const request=model.requests.own;
-    const options={review:`<p>Preview what happens when the team approves Alex’s listing.</p>${act('approve','Simulate approval')}`,active:`<p>Try an immediate match, or move forward to see what happens if the apartment is still empty.</p><div class="actions">${act('move','Advance to move-out')}${act('match','Review a possible match',true)}</div>`,away:`<p>The search is active for ${monthName(l.start,l.vacant)}. A month can be either vacant or matched.</p><div class="actions">${act('vacant','Simulate a full vacant month')}${act('match','Review a possible match',true)}</div>`,ended:`<p>Try the same dates again and explore the matched outcome.</p>${act('replay','Replay search',true)}`,matched:`<p>Try the same listing again to see a different search outcome.</p>${act('replay','Replay search',true)}`};
-    return `${head('My listing',l.title+' · '+l.campus)}<div class="layout"><div><section class="panel"><span class="pill">${statuses[l.status]}</span><h2 style="margin-top:15px">Listing timeline</h2>${l.status==='review'?`<p class="review-summary">Application received. Photos, lease documents and apartment details are ready for the demo review.</p>`:`<p class="review-summary">Approved in this demo. Your listing is live; documents and payment history are below.</p>`}${events.map(e=>`<div class="stage"><strong>${esc(e[0])}</strong><small>${esc(e[1])}</small></div>`).join('')}${request&&['active','away'].includes(l.status)?`<p class="status-note"><strong>A student requested this room.</strong> Termlet can now arrange a match in the demo.</p>`:''}</section><section class="panel"><div class="kicker">Demo controls</div><h2>Explore the next step</h2>${l.offer&&available(l)?offerReview(l):options[l.status]}${l.status==='review'?`<div class="mini"><a class="inline" href="#list">Edit application</a></div>`:''}</section></div><aside class="panel side"><img src="${photo(l)}" class="sidebar-photo" alt="Submitted apartment"><div class="kicker">Alex’s rent · CAD</div><h2>Term estimate</h2>${row('Promotion plan',promotionFor(l).name+' · '+percent(rateFor(l)))}${row('Months away',monthName(l.start)+' – '+monthName(l.end))}${row('Lease rent for the term',money(base))}${row('Vacancy support to date',money(support))}${matched?row('Sublet rent over matched months',money(cents(l.ask*left)))+row(percent(rateFor(l))+' service fee over matched months',money(cents(roundMonth(l.ask,rateFor(l))*left)))+row('Net sublet income',money(remainingIncome)):row('Sublet income to date',money(0))}${row(potential<0?'Surplus after lease rent':'Alex’s total share for the term',money(Math.abs(potential)),true)}<p class="help mini">${matched?'Estimate for the simulated agreement. Vacancy support stops when the match starts.':'The estimate counts completed vacant months. Future income or support will change it.'}</p>${monthBreakdown(l,matched)}</aside></div>${ownerPayments(l)}${documentPanel('owner',['lease','permission','agreement'])}`}
+  function dashboard() {
+    const l = model.listing;
+    if (!l) return empty();
+    const total = duration(l),
+      left = total - l.vacant,
+      matched = l.status === 'matched',
+      remainingIncome = matched ? cents((l.ask - roundMonth(l.ask, rateFor(l))) * left) : 0;
+    const support = cents(roundMonth(l.rent, coverage) * l.vacant),
+      base = cents(l.rent * total),
+      potential = cents(base - support - remainingIncome);
+    const events = [['Sent for review', 'Your photos, dates and rent are in the application.']];
+    if (l.status !== 'review')
+      events.push([
+        'Listing approved',
+        'Termlet took over the search. The listing is available to prospective subtenants while the search is active.'
+      ]);
+    if (l.moved) events.push(['Move-out date reached', 'The search continued after Alex moved away.']);
+    if (l.vacant)
+      events.push([
+        `${l.vacant} fully vacant ${l.vacant === 1 ? 'month' : 'months'}`,
+        `${money(support)} in total vacancy support for ${l.vacant === 1 ? monthName(l.start) : monthName(l.start) + ' – ' + monthName(l.start, l.vacant - 1)}.`
+      ]);
+    if (matched)
+      events.push([
+        'Subtenant matched',
+        `The demo match covers ${monthName(l.start, l.vacant)} through ${monthName(l.end)} at ${money(l.ask)}/month.`
+      ]);
+    if (l.status === 'ended') events.push(['Term ended', 'The search has finished for these dates.']);
+    const request = model.requests.own;
+    const options = {
+      review: (
+        <>
+          <UI.Text>Preview what happens when the team approves Alex’s listing.</UI.Text>
+          {act('approve', 'Simulate approval')}
+        </>
+      ),
+      active: (
+        <>
+          <UI.Text>
+            Try an immediate match, or move forward to see what happens if the apartment is still empty.
+          </UI.Text>
+          <UI.Actions>
+            {act('move', 'Advance to move-out')}
+            {act('match', 'Review a possible match', true)}
+          </UI.Actions>
+        </>
+      ),
+      away: (
+        <>
+          <UI.Text>
+            The search is active for {monthName(l.start, l.vacant)}. A month can be either vacant or matched.
+          </UI.Text>
+          <UI.Actions>
+            {act('vacant', 'Simulate a full vacant month')}
+            {act('match', 'Review a possible match', true)}
+          </UI.Actions>
+        </>
+      ),
+      ended: (
+        <>
+          <UI.Text>Try the same dates again and explore the matched outcome.</UI.Text>
+          {act('replay', 'Replay search', true)}
+        </>
+      ),
+      matched: (
+        <>
+          <UI.Text>Try the same listing again to see a different search outcome.</UI.Text>
+          {act('replay', 'Replay search', true)}
+        </>
+      )
+    };
+    return (
+      <>
+        {head('My listing', l.title + ' · ' + l.campus)}
+        <UI.Columns>
+          <div>
+            <UI.Panel>
+              <UI.Pill>{statuses[l.status]}</UI.Pill>
+              <UI.Heading style={{ marginTop: 15 }}>Listing timeline</UI.Heading>
+              {l.status === 'review' ? (
+                <UI.ReviewSummary>
+                  Application received. Photos, lease documents and apartment details are ready for the demo
+                  review.
+                </UI.ReviewSummary>
+              ) : (
+                <UI.ReviewSummary>
+                  Approved in this demo. Your listing is live; documents and payment history are below.
+                </UI.ReviewSummary>
+              )}
+              {events.map((e) => (
+                <UI.Stage key={e[0]}>
+                  <strong>{e[0]}</strong>
+                  <UI.Text as="small">{e[1]}</UI.Text>
+                </UI.Stage>
+              ))}
+              {request && ['active', 'away'].includes(l.status) ? (
+                <UI.StatusNote as="p">
+                  <strong>A student requested this room.</strong> Termlet can now arrange a match in the demo.
+                </UI.StatusNote>
+              ) : (
+                ''
+              )}
+            </UI.Panel>
+            <UI.Panel>
+              <UI.Kicker as="div">Demo controls</UI.Kicker>
+              <UI.Heading>Explore the next step</UI.Heading>
+              {l.offer && available(l) ? offerReview(l) : options[l.status]}
+              {l.status === 'review' ? (
+                <div className="mini">
+                  <UI.Inline href="#list">Edit application</UI.Inline>
+                </div>
+              ) : (
+                ''
+              )}
+            </UI.Panel>
+          </div>
+          <UI.Side as="aside">
+            <UI.SidebarPhoto as="img" src={photo(l)} alt="Submitted apartment" />
+            <UI.Kicker as="div">Alex’s rent · CAD</UI.Kicker>
+            <UI.Heading>Term estimate</UI.Heading>
+            {row('Promotion plan', promotionFor(l).name + ' · ' + percent(rateFor(l)))}
+            {row('Months away', monthName(l.start) + ' – ' + monthName(l.end))}
+            {row('Lease rent for the term', money(base))}
+            {row('Vacancy support to date', money(support))}
+            {matched ? (
+              <>
+                {
+                  <>
+                    {row('Sublet rent over matched months', money(cents(l.ask * left)))}
+                    {row(
+                      percent(rateFor(l)) + ' service fee over matched months',
+                      money(cents(roundMonth(l.ask, rateFor(l)) * left))
+                    )}
+                  </>
+                }
+                {row('Net sublet income', money(remainingIncome))}
+              </>
+            ) : (
+              row('Sublet income to date', money(0))
+            )}
+            {row(
+              potential < 0 ? 'Surplus after lease rent' : 'Alex’s total share for the term',
+              money(Math.abs(potential)),
+              true
+            )}
+            <UI.Help className="mini">
+              {matched
+                ? 'Estimate for the simulated agreement. Vacancy support stops when the match starts.'
+                : 'The estimate counts completed vacant months. Future income or support will change it.'}
+            </UI.Help>
+            {monthBreakdown(l, matched)}
+          </UI.Side>
+        </UI.Columns>
+        {ownerPayments(l)}
+        {documentPanel('owner', ['lease', 'permission', 'agreement'])}
+      </>
+    );
+  }
   function available(l){return l&&['active','away'].includes(l.status)}
   const featuredPlaces = { sample: termletRooms.sample, annex: termletRooms.annex, newToronto: termletRooms.newToronto };
   function listings(){const rooms={...(verified()&&available(model.listing)?{own:model.listing}:{}),...featuredPlaces,...termletRooms};return Object.fromEntries(Object.entries(rooms).map(([key,l])=>[key,{...(key==='own'?{}:demoHousehold(key,l)),...l,promotion:l.promotion||({sample:'featured',annex:'boosted'}[key])||'standard'}]));}
@@ -468,44 +1187,111 @@ function cardItem([id, room]) {
     household: householdSummary(room), sponsor: plan.rank ? plan.name : '' };
 }
 
-function monthBreakdown(l,matched){
-  const vacancyPayment=roundMonth(l.rent,coverage),fee=roundMonth(l.ask,rateFor(l));
-  const leaseGap=matched?cents(l.rent-l.ask+fee):cents(l.rent-vacancyPayment);
-  const title=matched?'A matched month':'A fully vacant month';
-  return `<section class="monthly"><h3>${title}</h3>${row('Your lease rent',money(l.rent))}${matched?row('Sublet rent collected',money(l.ask))+row(percent(rateFor(l))+' service fee',money(fee)):row('Termlet support',money(vacancyPayment))}${row(leaseGap<0?'Monthly surplus':'You cover for the month',money(Math.abs(leaseGap)),true)}<p class="help">${matched?'Applies in each month covered by the match.':'Illustration for a complete vacant month after approval.'}</p></section>`;
-}
+  function monthBreakdown(l, matched) {
+    const vacancyPayment = roundMonth(l.rent, coverage),
+      fee = roundMonth(l.ask, rateFor(l));
+    const leaseGap = matched ? cents(l.rent - l.ask + fee) : cents(l.rent - vacancyPayment);
+    const title = matched ? 'A matched month' : 'A fully vacant month';
+    return (
+      <UI.Monthly>
+        <UI.Heading as="h3">{title}</UI.Heading>
+        {row('Your lease rent', money(l.rent))}
+        {matched ? (
+          <>
+            {row('Sublet rent collected', money(l.ask))}
+            {row(percent(rateFor(l)) + ' service fee', money(fee))}
+          </>
+        ) : (
+          row('Termlet support', money(vacancyPayment))
+        )}
+        {row(leaseGap < 0 ? 'Monthly surplus' : 'You cover for the month', money(Math.abs(leaseGap)), true)}
+        <UI.Help>
+          {matched
+            ? 'Applies in each month covered by the match.'
+            : 'Illustration for a complete vacant month after approval.'}
+        </UI.Help>
+      </UI.Monthly>
+    );
+  }
 
-function offerReview(l){
-  const fee=roundMonth(l.ask,rateFor(l));
-  return `<div class="offer"><h3>Review a proposed match</h3><p>Termlet found a student for the remaining dates. Review the terms before you decide.</p>${row('Requested dates',monthName(l.start,l.vacant)+' – '+monthName(l.end))}${row('Monthly sublet rent',money(l.ask))}${row('Monthly fee · '+percent(rateFor(l)),money(fee))}${row('Toward your lease each month',money(cents(l.ask-fee)),true)}<div class="actions">${act('accept-match','Accept match')}${act('decline-match','Keep searching',true)}</div></div>`;
-}
+  function offerReview(l) {
+    const fee = roundMonth(l.ask, rateFor(l));
+    return (
+      <UI.Offer as="div">
+        <UI.Heading as="h3">Review a proposed match</UI.Heading>
+        <UI.Text>Termlet found a student for the remaining dates. Review the terms before you decide.</UI.Text>
+        {row('Requested dates', monthName(l.start, l.vacant) + ' – ' + monthName(l.end))}
+        {row('Monthly sublet rent', money(l.ask))}
+        {row('Monthly fee · ' + percent(rateFor(l)), money(fee))}
+        {row('Toward your lease each month', money(cents(l.ask - fee)), true)}
+        <UI.Actions>
+          {act('accept-match', 'Accept match')}
+          {act('decline-match', 'Keep searching', true)}
+        </UI.Actions>
+      </UI.Offer>
+    );
+  }
 
-function rentPreview(){
-  return `<div class="preview-math"><h3>What would I pay in one month?</h3><p class="help">Change the rent or promotion plan to compare your monthly cost.</p><div id="live-estimate" aria-live="polite"></div></div>`;
-}
+  function rentPreview() {
+    return (
+      <UI.PreviewMath as="div">
+        <UI.Heading as="h3">What would I pay in one month?</UI.Heading>
+        <UI.Help>Change the rent or promotion plan to compare your monthly cost.</UI.Help>
+        <div id="live-estimate" aria-live="polite" />
+      </UI.PreviewMath>
+    );
+  }
 
-function updateEstimate(){
-  const form=document.querySelector('#listing-form'),box=document.querySelector('#live-estimate');if(!form||!box)return;
-  const rent=form.elements.rent.valueAsNumber,ask=form.elements.ask.valueAsNumber;
-  if(!form.elements.rent.validity.valid||!form.elements.ask.validity.valid){box.textContent='Enter both monthly rents to see the estimate.';for(const cost of form.querySelectorAll('[data-plan-cost]'))cost.textContent='Enter valid rents to compare.';return}
-  const plan=promotionFor({promotion:form.elements.promotion.value}),support=roundMonth(rent,coverage),fee=roundMonth(ask,plan.rate),gap=cents(rent-ask+fee);
-  for(const cost of form.querySelectorAll('[data-plan-cost]')){const charge=roundMonth(ask,promotionPlans[cost.dataset.planCost].rate);cost.textContent='Fee '+money(charge)+' · You keep '+money(cents(ask-charge));}
-  box.innerHTML=row(plan.name+' fee · '+percent(plan.rate),money(fee))+row('You keep from matched rent',money(cents(ask-fee)))+row('Extra fee versus Standard',money(cents(fee-roundMonth(ask,promotionPlans.standard.rate))))+row('If fully vacant, you cover',money(cents(rent-support)))+row(gap<0?'If matched, monthly surplus':'If matched, you cover',money(Math.abs(gap)))+`<p class="help">Includes ${money(support)} of vacancy support or a ${money(fee)} fee on the rent collected.</p>`;
-}
+  function updateEstimate() {
+    const form = document.querySelector('#listing-form'),
+      box = document.querySelector('#live-estimate');
+    if (!form || !box) return;
+    const rent = form.elements.rent.valueAsNumber,
+      ask = form.elements.ask.valueAsNumber;
+    if (!form.elements.rent.validity.valid || !form.elements.ask.validity.valid) {
+      mount(box, 'Enter both monthly rents to see the estimate.');
+      for (const cost of form.querySelectorAll('[data-plan-cost]'))
+        cost.textContent = 'Enter valid rents to compare.';
+      return;
+    }
+    const plan = promotionFor({ promotion: form.elements.promotion.value }),
+      support = roundMonth(rent, coverage),
+      fee = roundMonth(ask, plan.rate),
+      gap = cents(rent - ask + fee);
+    for (const cost of form.querySelectorAll('[data-plan-cost]')) {
+      const charge = roundMonth(ask, promotionPlans[cost.dataset.planCost].rate);
+      cost.textContent = 'Fee ' + money(charge) + ' · You keep ' + money(cents(ask - charge));
+    }
+    mount(
+      box,
+      <>
+        {row(plan.name + ' fee · ' + percent(plan.rate), money(fee))}
+        {row('You keep from matched rent', money(cents(ask - fee)))}
+        {row('Extra fee versus Standard', money(cents(fee - roundMonth(ask, promotionPlans.standard.rate))))}
+        {row('If fully vacant, you cover', money(cents(rent - support)))}
+        {row(gap < 0 ? 'If matched, monthly surplus' : 'If matched, you cover', money(Math.abs(gap)))}
+        <UI.Help>
+          Includes {money(support)} of vacancy support or a {money(fee)} fee on the rent collected.
+        </UI.Help>
+      </>
+    );
+  }
 
-function option(value,label,selected){
-  return `<option value="${esc(value)}"${value===selected?' selected':''}>${esc(label)}</option>`;
-}
+  function option(value, label) {
+    return (
+      <option key={value} value={value}>
+        {label}
+      </option>
+    );
+  }
 
-function campusOptions(selected,includeRegions){
-  const groups=Object.entries(termletRegions);
-  const regions=includeRegions
-    ? option('','All campuses and regions',selected)+'<optgroup label="By region">'+groups.map(([key,region])=>option('region:'+key,region.name,selected)).join('')+'</optgroup>'
-    : '';
-  return regions+groups.map(([,group])=>
-    `<optgroup label="${esc(group.name)} campuses">${group.campuses.map(name=>option(name,name,selected)).join('')}</optgroup>`
-  ).join('');
-}
+  function campusOptions() {
+    return Object.entries(termletRegions).map(([key, region]) => (
+      <optgroup key={key} label={region.name + ' campuses'}>
+        {region.campuses.map((name) => option(name, name))}
+      </optgroup>
+    ));
+  }
 
 function availableFrom(l){
   const index=numMonth(l.start)+l.vacant;
@@ -565,22 +1351,112 @@ function fadeResults(grid,previous=new Map()) {
 }
 
 
-function room(key){
-  const rooms=listings();
-  const l=Object.hasOwn(rooms,key)?rooms[key]:null;
-  if(!l)return head('Room unavailable','This listing is unavailable for this term. Your search filters are saved.','browse','Search results')+link('browse','Back to results');
-  const where=l.area&&l.area!==l.city?`${l.area} · ${l.city}, Ontario`:l.city?`${l.city}, Ontario`:l.campus;
-  const requested=!!model.requests[key];
-  if(requested&&!model.stays[key]){newStay(key,l);save();}
-  const months=duration(l)-l.vacant;
-  return `${head(l.title,where,'browse','Search results')}${promotionFor(l).rank?`<p class="sponsor-disclosure">${sponsorBadge(l)} <span>The leaseholder chose paid promotion.</span></p>`:''}<div class="layout details">
-    <section class="panel detail-room"><div id="room-gallery"></div><h2>About this place</h2><p>${esc(l.description||'A student sublet listed for the dates shown. Termlet handles the search and coordinates requests with the leaseholder.')}</p>
-    ${l.features?`<ul class="amenities">${l.features.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:''}
-    ${l.luxury?'<p class="help mini">Luxury demo apartment · The monthly price covers the entire unit. Interiors and pricing are illustrative.</p>':''}${householdDetails(l)}<h3>Campus and neighbourhood</h3><p>${esc(l.local||l.campus)}</p>${l.source?`<a href="${esc(l.source)}" target="_blank" rel="noopener" class="inline local-source">${l.image?'Official campus guide':'Local area guide'} <span class="arrow" aria-hidden="true">↗</span></a>`:''}</section>
-    <aside class="panel side request-panel"><p class="metric-label">Monthly sublet rent</p><h2>${money(l.ask)} <small>/ month</small></h2>
-    ${row('Available from',monthName(l.start,l.vacant))}${row('Through',monthName(l.end))}${row('Full listing term',months+' '+(months===1?'month':'months'))}${row('Total rent for these dates',money(cents(months*l.ask)),true)}
-    ${requested?`<div class="status-note" role="status"><h3>Request received</h3><p>Termlet would coordinate this request with the leaseholder. You can withdraw it if your plans change.</p></div><div class="actions">${link('stay/'+key,'Open my stay')}${act('withdraw-'+key,'Withdraw request',true)}</div>`:`<p class="help mini">Your request covers all listed months. Termlet’s service fee is paid from the leaseholder’s sublet income.</p><div class="actions">${act('request-'+key,'Request these dates')}</div>`}</aside></div>`;
-}
+  function room(key) {
+    const rooms = listings();
+    const l = Object.hasOwn(rooms, key) ? rooms[key] : null;
+    if (!l)
+      return (
+        <>
+          {head(
+            'Room unavailable',
+            'This listing is unavailable for this term. Your search filters are saved.',
+            'browse',
+            'Search results'
+          )}
+          {link('browse', 'Back to results')}
+        </>
+      );
+    const where =
+      l.area && l.area !== l.city ? `${l.area} · ${l.city}, Ontario` : l.city ? `${l.city}, Ontario` : l.campus;
+    const requested = !!model.requests[key];
+    if (requested && !model.stays[key]) {
+      newStay(key, l);
+      save();
+    }
+    const months = duration(l) - l.vacant;
+    return (
+      <>
+        {head(l.title, where, 'browse', 'Search results')}
+        {promotionFor(l).rank ? (
+          <UI.SponsorDisclosure as="p">
+            {sponsorBadge(l)} <span>The leaseholder chose paid promotion.</span>
+          </UI.SponsorDisclosure>
+        ) : (
+          ''
+        )}
+        <UI.SidebarLayout>
+          <UI.DetailRoom>
+            <div id="room-gallery" />
+            <UI.Heading>About this place</UI.Heading>
+            <UI.Text>
+              {l.description ||
+                'A student sublet listed for the dates shown. Termlet handles the search and coordinates requests with the leaseholder.'}
+            </UI.Text>
+            {l.features ? (
+              <UI.Amenities as="ul">
+                {l.features.map((s) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </UI.Amenities>
+            ) : (
+              ''
+            )}
+            {l.luxury ? (
+              <UI.Help className="mini">
+                Luxury demo apartment · The monthly price covers the entire unit. Interiors and pricing are
+                illustrative.
+              </UI.Help>
+            ) : (
+              ''
+            )}
+            {householdDetails(l)}
+            <UI.Heading as="h3">Campus and neighbourhood</UI.Heading>
+            <UI.Text>{l.local || l.campus}</UI.Text>
+            {l.source ? (
+              <UI.LocalSource href={l.source} target="_blank" rel="noopener">
+                {l.image ? 'Official campus guide' : 'Local area guide'} <UI.Arrow aria-hidden="true">↗</UI.Arrow>
+              </UI.LocalSource>
+            ) : (
+              ''
+            )}
+          </UI.DetailRoom>
+          <UI.RequestPanel>
+            <UI.MetricLabel>Monthly sublet rent</UI.MetricLabel>
+            <UI.Heading>
+              {money(l.ask)} <UI.Text as="small">/ month</UI.Text>
+            </UI.Heading>
+            {row('Available from', monthName(l.start, l.vacant))}
+            {row('Through', monthName(l.end))}
+            {row('Full listing term', months + ' ' + (months === 1 ? 'month' : 'months'))}
+            {row('Total rent for these dates', money(cents(months * l.ask)), true)}
+            {requested ? (
+              <>
+                <UI.StatusNote role="status">
+                  <UI.Heading as="h3">Request received</UI.Heading>
+                  <UI.Text>
+                    Termlet would coordinate this request with the leaseholder. You can withdraw it if your plans
+                    change.
+                  </UI.Text>
+                </UI.StatusNote>
+                <UI.Actions>
+                  {link('stay/' + key, 'Open my stay')}
+                  {act('withdraw-' + key, 'Withdraw request', true)}
+                </UI.Actions>
+              </>
+            ) : (
+              <>
+                <UI.Help className="mini">
+                  Your request covers all listed months. Termlet’s service fee is paid from the leaseholder’s
+                  sublet income.
+                </UI.Help>
+                <UI.Actions>{act('request-' + key, 'Request these dates')}</UI.Actions>
+              </>
+            )}
+          </UI.RequestPanel>
+        </UI.SidebarLayout>
+      </>
+    );
+  }
   function marketplaceView(path) {
     if (path === 'stays') return stays();
     if (path.startsWith('stay/')) return stayPortal(path.slice(5));
@@ -597,21 +1473,24 @@ function room(key){
 
   function render(){
     if(budgetCleanup)budgetCleanup();
-    if(activePicker){activePicker.close();activePicker.remove();activePicker=null;}
+    activePicker?.();
     const path=location.hash.slice(1)||'home';
+    const screen = path.split('/')[0];
+    main.dataset.screen = !verified() && (screen === 'list' || (screen === 'dashboard' && model.listing)) ? 'verify' : screen;
     for (const root of [...roots.values()].reverse()) root.unmount();
     roots.clear();
     if (path === 'design' || path.startsWith('design/')) {
       main.replaceChildren();
-      mount(main, <DesignDashboard route={path} sample={cardItem(['sample', listings().sample])}/>);
+      mount(main, <DesignDashboard getExamples={makeExamples} route={path} sample={cardItem(['sample', listings().sample])}/>);
       document.title = 'Design system · Termlet';
       document.querySelectorAll('.top [aria-current]').forEach(link => link.removeAttribute('aria-current'));
       window.scrollTo(0,0);
       return;
     }
     const view = marketplaceView(path);
-    if (typeof view === 'string') main.innerHTML = view;
-    else mount(main, view);
+    mount(main, view);
+    for (const box of main.querySelectorAll('[data-doc-list]')) mount(box,documentList(box.dataset.docList));
+    drawPhotos();
     const payments = main.querySelector('[data-bills]');
     if (payments) {
       const scope = payments.dataset.bills;
@@ -630,12 +1509,57 @@ function room(key){
     }
     if(path==='list')updateEstimate();
     if(path==='browse'){const form=document.getElementById('filter-form');limitChoices(form);setupBudgetSlider(form);}
-    setupPickers();
     window.scrollTo(0,0);document.title=(main.querySelector('h1')?.textContent||'Student sublets')+' · Termlet';
   }
   function focusPanel(selector){
     const panel=document.querySelector(selector);
     if(panel){panel.tabIndex=-1;panel.focus({preventScroll:true});panel.scrollIntoView({block:'nearest'})}
+  }
+  // The catalog renders these views in a detached React root. Its fictional
+  // applications and document metadata belong to this controller alone.
+  if (examplesOnly) {
+    const listing = {
+      ...listings().sample,
+      photos: samplePhotos,
+      documents: { lease: { name: 'Sample lease.pdf', sample: true } },
+      payments: {},
+      status: 'away',
+      vacant: 1,
+      moved: true,
+      offer: true
+    };
+    model = { studentCheck: 'enrolled-demo', listing, requests: { sample: true }, stays: {} };
+    newStay('sample', listing);
+    const stay = model.stays.sample;
+    stay.status = 'active';
+    const screens = {
+      home: home(),
+      browse: (
+        <>
+          {browse()}
+          {searchResults({ sample: listing })}
+        </>
+      ),
+      verify: <StudentCheck />,
+      guide: guide(),
+      list: list(),
+      dashboard: dashboard(),
+      room: room('sample'),
+      stays: stays(),
+      stay: stayPortal('sample')
+    };
+    return (
+      <>
+        {Object.entries(screens).map(([screen, content]) => (
+          <UI.AppScreen key={screen} data-screen={screen}>
+            {content}
+          </UI.AppScreen>
+        ))}
+        <Gallery photos={photosFor('sample', listing)} />
+        <PaymentTable scope="owner" bills={ownerBills(listing)} dueDate={dueDate} money={money} />
+        <PickerContents id="example-picker" label="Campus" searchable />
+      </>
+    );
   }
   main.addEventListener('input',e=>{
     e.target.removeAttribute('aria-invalid');
@@ -645,7 +1569,7 @@ function room(key){
       applyFilters(e.target.form);
     }
   });
-  function drawPhotos(){const p=document.querySelector('#photo-preview');if(p)p.innerHTML=previewPhotos();}
+  function drawPhotos(){const p=document.querySelector('#photo-preview');if(p)mount(p,previewPhotos());}
   main.addEventListener('change',async e=>{
     const input=e.target,form=input.form;
     if(input.matches('[data-document]')){handleDocument(input);return;}

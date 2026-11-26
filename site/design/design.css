@@ -52,3 +52,20 @@
 .color-inputs input[type=color]{height:auto;min-height:42px}
 .color-inputs input[type=text]{font-family:ui-monospace,monospace}
 .color-control small{display:block;color:var(--ink);margin-top:4px}
+.lab-tabs{flex-wrap:wrap;row-gap:0}
+.type-controls{margin:20px 0;padding:12px 0;border:0;border-top:1px solid var(--line);min-width:0}
+.type-controls legend{font-weight:650;padding-right:8px}
+.catalog-layout{display:grid;grid-template-columns:minmax(220px,27%) minmax(0,1fr);gap:20px;align-items:start}
+.catalog-nav{min-width:0}.catalog-list,.catalog-list ul{list-style:none;padding:0}.catalog-list{margin:14px 0 0;max-height:62vh;overflow:auto}.catalog-list ul{margin:4px 0 8px 8px;border-left:1px solid var(--line);padding-left:8px}
+.catalog-list summary{cursor:pointer;font-weight:650;padding:4px}.catalog-list button{background:transparent;color:var(--ink);border:0;border-radius:5px;display:flex;align-items:center;gap:8px;text-align:left;padding:5px 8px;width:100%}
+.catalog-list button[aria-current],.catalog-list button:hover{background:var(--pale)}.catalog-list small{color:var(--muted)}
+.catalog-detail{display:grid;gap:16px;min-width:0}.component-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}
+.component-fields output{float:right}.component-fields input{accent-color:var(--accent)}
+.component-path,.variant-links,.family-map{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap}
+.family-map a{font-size:.85rem;margin:0}.component-path:not(:empty){margin-bottom:10px}
+.component-specimen{min-height:90px;padding:20px;border:1px dashed var(--line);border-radius:10px;overflow:auto;background:var(--surface-subtle)}
+.component-specimen .actions{margin:0}.component-specimen .listing-card,.sample-card,.specimen-photo{max-width:360px;width:100%}
+.component-example{padding:12px}.specimen-budget{display:block}.catalog-detail .plain-button:disabled{opacity:.55}
+@media(max-width:700px){.catalog-layout{grid-template-columns:1fr}.catalog-list{max-height:200px}.lab-tabs{column-gap:12px}.catalog-nav{padding:12px}.component-fields{gap:12px}}
+.component-specimen{position:relative;contain:layout paint;max-height:580px}
+.component-specimen > .picker-search-wrap,.component-specimen > .budget-axis{position:static}
