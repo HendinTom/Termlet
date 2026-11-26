@@ -18,6 +18,9 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Assemble versioned previews
         shell: bash
         run: |
@@ -29,7 +32,14 @@ jobs:
             [[ $slug =~ ^[0-9]+-[a-z0-9-]+$ ]] || continue
             target="public/iterations/$slug"
             mkdir -p "$target"
-            git archive "$ref:site" | tar -x -C "$target"
+            if git cat-file -e "$ref:package-lock.json" 2>/dev/null; then
+              source_dir=$(mktemp -d)
+              git archive "$ref" | tar -x -C "$source_dir"
+              (cd "$source_dir" && npm ci && npm run build)
+              cp -a "$source_dir/dist/." "$target/"
+            else
+              git archive "$ref:site" | tar -x -C "$target"
+            fi
             test -f "$target/index.html"
             latest="$target"
           done < <(git for-each-ref --sort=version:refname --format='%(refname)' refs/remotes/origin/iteration/)

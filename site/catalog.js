@@ -333,3 +333,5 @@ for (const [key, { school, waterloo, ...place }] of Object.entries(luxuryPlaces)
   };
   termletGalleryLabels[key] = ['Living room', 'Kitchen', 'Primary bedroom', 'Bathroom'];
 }
+
+export { termletRooms, termletGalleryLabels, termletRegions };

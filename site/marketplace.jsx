@@ -1,5 +1,21 @@
-(function termlet(){
-  'use strict';
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
+import { PaymentTable } from './components/PaymentTable';
+import { SearchFilters } from './components/SearchFilters';
+import { Gallery } from './components/Gallery';
+import { StudentCheck } from './components/StudentCheck';
+import { Home } from './components/Home';
+import { SearchResults } from './components/Marketplace';
+import { DesignDashboard } from './design/Dashboard';
+import { termletRooms, termletRegions, termletGalleryLabels } from './catalog';
+
+export function startMarketplace(){
+  const roots = new Map();
+  function mount(container, content) {
+    if (!roots.has(container)) roots.set(container, createRoot(container));
+    const viewRoot = roots.get(container);
+    flushSync(() => viewRoot.render(content));
+  }
   const main=document.querySelector('main');
   const storeKey='termlet-student-prototype-v1';
   const coverage=.10;
@@ -56,13 +72,9 @@
       const [from,to]=period.split('/');
       const season=from.slice(0,4)===to.slice(0,4) && standard[from.slice(5)+'/'+to.slice(5)];
       const label=season ? season+' '+from.slice(0,4)+' · '+months[Number(from.slice(5))-1].slice(0,3)+'–'+months[Number(to.slice(5))-1].slice(0,3) : monthName(from)+' – '+monthName(to);
-      return option(period,label,filterTerm);
-    }).join('');
-    const dateOptions = (dates,selected) => option('','Any month',selected)+dates.map(d=>option(d,monthName(d),selected)).join('');
-    return {
-      term: `<label>Sublet term<select name="term">${option('','Any term',filterTerm)}${termOptions}${option('custom','Choose months…',filterTerm)}</select></label>`,
-      custom: `<div class="custom-months" id="custom-months" ${filterTerm==='custom'?'':'hidden'}><label>First month<select name="from">${dateOptions(monthChoices,filterStart)}</select></label><label>Last month<select name="until">${dateOptions(monthChoices,filterEnd)}</select></label><p class="help">Choose the first or last month of the listed term, or both.</p></div>`
-    };
+      return [period,label];
+    });
+    return { terms: termOptions, months: monthChoices.map(d=>[d,monthName(d)]) };
   }
   function budgetValueAt(position) {
     const p=Math.max(0,Math.min(1,position));
@@ -77,19 +89,19 @@
     return .75+.25*(Math.sqrt(entry*entry+4*curve*(v-budgetKnee))-entry)/(2*curve);
   }
   function budgetFields() {
-    return `<fieldset class="budget-field"><legend>Monthly rent (CAD)</legend>
-      <div class="budget-track" aria-describedby="budget-step">
-        <div class="budget-rail" aria-hidden="true"><div class="budget-selection"></div></div>
-        <input id="rent-min" type="range" name="minBudget" min="0" max="${budgetCeiling}" step="50" value="${filterMin || 0}" aria-label="Minimum monthly rent" aria-describedby="budget-step">
-        <input id="rent-max" type="range" name="budget" min="0" max="${budgetCeiling}" step="50" value="${filterBudget}" aria-label="Maximum monthly rent" aria-describedby="budget-step">
-        <span class="budget-handle budget-lower" aria-hidden="true"></span>
-        <span class="budget-handle budget-upper" aria-hidden="true"></span>
-        <output class="budget-bubble" aria-hidden="true"></output>
-        <div class="budget-axis" aria-hidden="true"><span>${money(0)}</span><span>${money(budgetKnee)}</span><span>${money(budgetCeiling)}</span></div>
+    return <fieldset className="budget-field"><legend>Monthly rent (CAD)</legend>
+      <div className="budget-track" aria-describedby="budget-step">
+        <div className="budget-rail" aria-hidden="true"><div className="budget-selection"></div></div>
+        <input id="rent-min" type="range" name="minBudget" min="0" max={budgetCeiling} step="50" defaultValue={filterMin || 0} aria-label="Minimum monthly rent" aria-describedby="budget-step"/>
+        <input id="rent-max" type="range" name="budget" min="0" max={budgetCeiling} step="50" defaultValue={filterBudget} aria-label="Maximum monthly rent" aria-describedby="budget-step"/>
+        <span className="budget-handle budget-lower" aria-hidden="true"></span>
+        <span className="budget-handle budget-upper" aria-hidden="true"></span>
+        <output className="budget-bubble" aria-hidden="true"></output>
+        <div className="budget-axis" aria-hidden="true"><span>{money(0)}</span><span>{money(budgetKnee)}</span><span>{money(budgetCeiling)}</span></div>
       </div>
-      <div class="budget-endpoints"><label for="rent-min">Minimum <output id="rent-min-value"></output></label><label for="rent-max">Maximum <output id="rent-max-value"></output></label></div>
-      <p id="budget-step" class="sr-only">Drag either end to set the budget, or drag the middle to move both ends. The first three quarters run from $0 to $4,500; the last quarter increases faster to $10,000. Arrow keys adjust the amount; Shift plus an arrow moves the range.</p>
-    </fieldset>`;
+      <div className="budget-endpoints"><label htmlFor="rent-min">Minimum <output id="rent-min-value"></output></label><label htmlFor="rent-max">Maximum <output id="rent-max-value"></output></label></div>
+      <p id="budget-step" className="sr-only">Drag either end to set the budget, or drag the middle to move both ends. The first three quarters run from $0 to $4,500; the last quarter increases faster to $10,000. Arrow keys adjust the amount; Shift plus an arrow moves the range.</p>
+    </fieldset>;
   }
   function updateBudgetSlider(form, changed) {
     const lower = form.elements.minBudget, upper = form.elements.budget;
@@ -333,13 +345,6 @@
     draw();
     list.focus({preventScroll:true});
   }
-  function studentCheck() {
-    return `${head('Verify student status','Only current students can list a home they personally lease. Anyone can browse.')}<div class="layout"><section class="panel"><h2>Student eligibility check</h2><p>Try a fictional profile to see how an enrolment check would work. No ID or personal details are collected in this demo.</p>
-    <form id="verify-form" novalidate><label>Demo profile<select name="profile" required>${option('','Choose a profile','')}${option('student','Alex · Currently enrolled','')}${option('unconfirmed','Enrolment unconfirmed','')}${option('business','Company or property manager','')}</select></label>
-    <label class="check-line"><input type="checkbox" name="personal"><span>I’m a student posting my own leased place.</span></label>
-    <p role="alert" id="verify-error" class="error"></p><button type="submit" class="btn">Check eligibility and continue</button></form></section>
-    <aside class="panel side"><h2>Why check?</h2><p>The proposed service would use an enrolment verifier such as SheerID. A separate listing review would check the leaseholder’s right to sublet before the room appeared in search.</p>${link('guide','Read the student guide',true)}</aside></div>`;
-  }
   function guide() {
     return `${head('Student sublet guide','A guide to share with your student association, housing group or co-op classmates.')}
     <div class="layout"><section class="panel guide-copy"><h2>Listing your own place</h2><p>Start with the student check, then add your dates, rent and apartment photos. In the proposed service, Termlet would review the listing before taking on the search. Businesses and third-party agents can’t post through this flow.</p>
@@ -356,28 +361,6 @@
       const cover=room.image || (room.tile ? 'gallery/'+key+'-cover.webp' : 'room.jpg');
       return {src:mediaUrl(i?'gallery/'+key+'-'+i+'.webp':cover),label,alt:i?label+' in '+room.title:room.alt};
     });
-  }
-  function photoMarkup(p,main=false) {
-    if(!p.sheet)return `<img${main?' class="gallery-main"':''} src="${esc(p.src)}" alt="${main?esc(p.alt):''}" decoding="async">`;
-    return `<span class="sheet-view${main?' gallery-main':''}"${main?' role="img" aria-label="'+esc(p.alt)+'"':' aria-hidden="true"'} style="--photo-x:${p.index%2};--photo-y:${Math.floor(p.index/2)}"><img src="${esc(p.src)}" alt="" decoding="async" loading="${main?'eager':'lazy'}"></span>`;
-  }
-  function gallery(key,room) {
-    const photos=photosFor(key,room);
-    if(!photos.length) return '';
-    const first=photos[0];
-    const arrows=photos.length>1 ? '<button data-photo-step="-1" class="gallery-arrow previous" aria-label="Previous photo">‹</button><button data-photo-step="1" class="gallery-arrow next" aria-label="Next photo">›</button>' : '';
-    const thumbs=photos.length>1 ? `<div class="gallery-thumbs" aria-label="Choose photo">${photos.map((p,i)=>`<button type="button" data-photo-index="${i}" aria-pressed="${i===0}" aria-label="Show ${esc(p.label)}, photo ${i+1}">${photoMarkup(p)}<span>${esc(p.label)}</span></button>`).join('')}</div>` : '';
-    return `<section class="photo-gallery" data-room="${esc(key)}" aria-label="Listing photos"><div class="gallery-stage">${photoMarkup(first,true)}${arrows}</div><div class="gallery-caption" aria-live="polite"><strong>${esc(first.label)}</strong><span>1 of ${photos.length}</span></div>${thumbs}</section>`;
-  }
-  function showPhoto(el,step,index) {
-    const photos=photosFor(el.dataset.room,listings()[el.dataset.room]);
-    const current=Number(el.dataset.current||0);
-    const next=index===undefined ? (current+step+photos.length)%photos.length : index;
-    const p=photos[next],img=el.querySelector('.gallery-main');
-    img.outerHTML=photoMarkup(p,true); el.dataset.current=next;
-    el.querySelector('.gallery-caption strong').textContent=p.label;
-    el.querySelector('.gallery-caption span').textContent=(next+1)+' of '+photos.length;
-    for (const b of el.querySelectorAll('[data-photo-index]')) b.setAttribute('aria-pressed',String(Number(b.dataset.photoIndex)===next));
   }
   function previewPhotos() {
     return newPhotos.map((src,i)=>`<div class="upload-thumb"><img src="${esc(mediaUrl(src))}" alt="Selected apartment photo ${i+1}"><button type="button" data-remove-photo="${i}" aria-label="Remove photo ${i+1}">Remove</button></div>`).join('');
@@ -426,10 +409,9 @@
   function monthKey(start,offset){const n=numMonth(start)+offset;return Math.floor(n/12)+'-'+String(n%12+1).padStart(2,'0');}
   const dueDate = key => new Date(Number(key.slice(0,4)),Number(key.slice(5))-1,1).toLocaleDateString('en-CA',{day:'numeric',month:'short',year:'numeric'});
   function ownerBills(l){return Array.from({length:duration(l)},(_,i)=>{const key=monthKey(l.start,i),vacant=i<l.vacant,matched=l.status==='matched'&&!vacant;const support=vacant?roundMonth(l.rent,coverage):0,net=matched?cents(l.ask-roundMonth(l.ask,rateFor(l))):0;const balance=cents(l.rent-support-net),paid=l.payments?.[key]?.amount||0;return {key,amount:Math.max(0,balance),credit:Math.max(0,cents(paid-balance)),paid,confirmed:vacant||matched,kind:vacant?'Vacancy support applied':matched?'Net sublet rent scheduled':'Projected · search active'};});}
-  function paymentRows(bills,scope){return `<div class="payment-table"><table><thead><tr><th>Due date</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody>${bills.map(b=>`<tr><td>${esc(dueDate(b.key))}<small>${esc(b.kind||'Monthly rent')}</small></td><td>${money(b.amount)}${b.credit?`<small>${money(b.credit)} credit</small>`:''}</td><td><span class="payment-status ${b.paid>=b.amount&&b.confirmed?'paid':''}">${!b.confirmed?'Projected':b.paid>=b.amount?'Paid / settled':'Upcoming'}</span>${b.paid?`<small>Demo receipt · ${b.key.replace('-','')}</small>`:''}</td><td>${b.confirmed&&b.paid<b.amount?`<button class="plain-button" type="button" data-pay="${b.key}" data-scope="${esc(scope)}">Simulate payment</button>`:''}</td></tr>`).join('')}</tbody></table></div>`;}
   function ownerPayments(l){
     const bills=ownerBills(l),confirmed=bills.filter(b=>b.confirmed),paid=cents(bills.reduce((s,b)=>s+b.paid,0)),outstanding=cents(confirmed.reduce((s,b)=>s+Math.max(0,b.amount-b.paid),0)),next=confirmed.find(b=>b.paid<b.amount);
-    return `<section class="panel payments-panel"><div class="section-head"><div><div class="kicker">Leaseholder portal</div><h2>Your payments through Termlet</h2></div><span class="pill">Demo payments</span></div><div class="portal-metrics">${metric('Confirmed balance remaining',money(outstanding))}${metric('Paid in this demo',money(paid))}${metric('Next payment',next?dueDate(next.key):confirmed.length?'No payment pending':'Awaiting a confirmed bill')}</div><p class="help">Monthly due dates are the first of each month in this example. Your balance is lease rent minus net subtenant rent or vacancy support. Projected months update when a match or vacant month is confirmed.</p>${paymentRows(bills,'owner')}<p class="help">Termlet would coordinate the lease payment. These buttons record simulated payments only.</p></section>`;
+    return `<section class="panel payments-panel"><div class="section-head"><div><div class="kicker">Leaseholder portal</div><h2>Your payments through Termlet</h2></div><span class="pill">Demo payments</span></div><div class="portal-metrics">${metric('Confirmed balance remaining',money(outstanding))}${metric('Paid in this demo',money(paid))}${metric('Next payment',next?dueDate(next.key):confirmed.length?'No payment pending':'Awaiting a confirmed bill')}</div><p class="help">Monthly due dates are the first of each month in this example. Your balance is lease rent minus net subtenant rent or vacancy support. Projected months update when a match or vacant month is confirmed.</p><div data-bills="owner"></div><p class="help">Termlet would coordinate the lease payment. These buttons record simulated payments only.</p></section>`;
   }
   const metric=(label,value)=>`<div><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
   function stayBills(s){return Array.from({length:duration(s.listing)},(_,i)=>{const key=monthKey(s.listing.start,i);return {key,amount:s.listing.ask,paid:s.payments?.[key]?.amount||0,confirmed:s.status==='active'};});}
@@ -437,7 +419,7 @@
   function stayPortal(key){
     const s=model.stays[key];if(!s)return stays();const l=s.listing,bills=stayBills(s),paid=cents(bills.reduce((sum,b)=>sum+b.paid,0)),remaining=cents(l.ask*duration(l)-paid),next=bills.find(b=>b.paid<b.amount);
     const state=s.status==='active'?'Active sublet':s.status==='agreement'?'Application approved':'Application in review';
-    return `${head('My stay',l.title,'stays','All my stays')}<div class="layout"><div><section class="panel"><span class="pill">${state}</span><h2 class="portal-title">${s.status==='review'?'Your request is being reviewed':s.status==='agreement'?'Your room is approved':'You’re ready for your stay'}</h2><div class="stage"><strong>Request sent</strong><small>${esc(monthName(l.start))} – ${esc(monthName(l.end))}, at ${money(l.ask)} per month.</small></div><div class="stage"><strong>${s.status==='review'?'Review pending':'Review approved'}</strong><small>Identity, dates and the sublet arrangement would be checked.</small></div><div class="stage"><strong>${s.status==='active'?'Signed agreement added':'Signed agreement needed'}</strong><small>The payment schedule opens after the agreement is added.</small></div>${s.status==='review'?`<div class="actions">${act('stay-approve-'+key,'Simulate approval')}${act('stay-withdraw-'+key,'Withdraw application',true)}</div>`:s.status==='agreement'?`<div class="actions">${act('stay-activate-'+key,'Confirm signed agreement')}</div><p class="error" role="alert" id="stay-error"></p>`:''}</section>${documentPanel('stay:'+key,['agreement'])}<section class="panel"><h3>About your household</h3><p>${esc(householdSummary(l))}</p></section></div><aside class="panel side"><div class="kicker">Renter portal</div><h2>Your rent</h2>${row('Monthly rent paid to Termlet',money(l.ask))}${row('Term dates',monthName(l.start)+' – '+monthName(l.end))}${row('Total rent for the term',money(cents(l.ask*duration(l))))}${row('Paid in this demo',money(paid))}${row(s.status==='active'?'Remaining scheduled rent':'Projected term balance',money(remaining),true)}${row('Next payment date',s.status==='active'&&next?dueDate(next.key):s.status==='active'?'All paid':'After signed agreement')}<p class="help mini">The leaseholder’s service fee is deducted from their proceeds. It is not added to your rent. Payments here are simulated.</p></aside></div><section class="panel payments-panel"><h2>Monthly payment schedule</h2><p class="help">For this demo, rent is due on the first of each month. Payment buttons unlock when your signed agreement is confirmed.</p>${paymentRows(bills,'stay:'+key)}</section>`;
+    return `${head('My stay',l.title,'stays','All my stays')}<div class="layout"><div><section class="panel"><span class="pill">${state}</span><h2 class="portal-title">${s.status==='review'?'Your request is being reviewed':s.status==='agreement'?'Your room is approved':'You’re ready for your stay'}</h2><div class="stage"><strong>Request sent</strong><small>${esc(monthName(l.start))} – ${esc(monthName(l.end))}, at ${money(l.ask)} per month.</small></div><div class="stage"><strong>${s.status==='review'?'Review pending':'Review approved'}</strong><small>Identity, dates and the sublet arrangement would be checked.</small></div><div class="stage"><strong>${s.status==='active'?'Signed agreement added':'Signed agreement needed'}</strong><small>The payment schedule opens after the agreement is added.</small></div>${s.status==='review'?`<div class="actions">${act('stay-approve-'+key,'Simulate approval')}${act('stay-withdraw-'+key,'Withdraw application',true)}</div>`:s.status==='agreement'?`<div class="actions">${act('stay-activate-'+key,'Confirm signed agreement')}</div><p class="error" role="alert" id="stay-error"></p>`:''}</section>${documentPanel('stay:'+key,['agreement'])}<section class="panel"><h3>About your household</h3><p>${esc(householdSummary(l))}</p></section></div><aside class="panel side"><div class="kicker">Renter portal</div><h2>Your rent</h2>${row('Monthly rent paid to Termlet',money(l.ask))}${row('Term dates',monthName(l.start)+' – '+monthName(l.end))}${row('Total rent for the term',money(cents(l.ask*duration(l))))}${row('Paid in this demo',money(paid))}${row(s.status==='active'?'Remaining scheduled rent':'Projected term balance',money(remaining),true)}${row('Next payment date',s.status==='active'&&next?dueDate(next.key):s.status==='active'?'All paid':'After signed agreement')}<p class="help mini">The leaseholder’s service fee is deducted from their proceeds. It is not added to your rent. Payments here are simulated.</p></aside></div><section class="panel payments-panel"><h2>Monthly payment schedule</h2><p class="help">For this demo, rent is due on the first of each month. Payment buttons unlock when your signed agreement is confirmed.</p><div data-bills="stay:${esc(key)}"></div></section>`;
   }
   function newStay(key,l){model.stays[key]={listing:{...l,start:monthKey(l.start,l.vacant),vacant:0},status:'review',documents:{},payments:{}};}
 
@@ -451,13 +433,12 @@
     return [...slots,...entries.filter(([key])=>!selected.has(key))];
   }
   const sponsorBadge = l => promotionFor(l).rank ? `<span class="sponsor-badge">Sponsored · ${promotionFor(l).name}</span>` : '';
-  function homeSpotlight() {
-    const [key,l]=Object.entries(listings()).find(([,room])=>promotionFor(room).rank===2)||['sample',listings().sample];
-    const pic=photosFor(key,l)[0];
-    return `<figure class="hero-sponsored"><a class="hero-image-link" href="#room/${key}" aria-label="View ${esc(l.title)}"><img src="${esc(pic.src)}" alt="${esc(pic.alt)}"></a><figcaption class="hero-caption">${sponsorBadge(l)}<a href="#room/${key}"><strong>${esc(l.title)}</strong><span>${esc(l.city||l.campus)} · ${money(l.ask)} / month</span></a></figcaption></figure>`;
+  function home() {
+    const entries = Object.entries(listings());
+    const [id, room] = entries.find(([,room])=>promotionFor(room).rank === 2) || ['sample',listings().sample];
+    const spotlight = { item: cardItem([id,room]), picture: photosFor(id,room)[0] };
+    return <Home hasListing={!!model.listing} spotlight={spotlight} cards={sponsoredFirst(entries).slice(0,3).map(cardItem)}/>;
   }
-  function terms(){return `<section class="terms"><div class="section-head"><h2>How the rent works</h2></div><div class="rates"><div class="rate"><div class="number">10%</div><div><h3>Support when it’s empty</h3><p>Of lease rent for each fully vacant month of an approved listing. We keep searching during the term.</p></div></div><div class="rate"><div class="number">15%</div><div><h3>Standard fee when rented</h3><p>Of collected sublet rent; you keep 85%. Optional Boosted (18%) and Featured (20%) plans add sponsored placement.</p></div></div></div><p class="footnote">Illustrative prototype rates. Support starts with the approved term. Each month is counted once.</p></section>`}
-  function home(){return `<section class="hero"><div><div class="kicker">Waterloo Region &amp; Greater Toronto</div><h1>A sublet for your <em>away term.</em></h1><p class="intro">List your place before co-op. Once it’s approved, we find a student to take it and help cover part of the rent if it stays empty.</p><div class="actions">${link(model.listing?'dashboard':'list',model.listing?'Track my listing':'List my place')}${link('browse','Find a sublet',true)}</div></div>${homeSpotlight()}</section>${terms()}${featured()}<section class="guide-callout"><div><h2>Student sublet guide</h2><p>Find out who can list a room and where to get campus housing help.</p></div>${link('guide','Open the guide',true)}</section>`}
   function list(){
     const l=model.listing||{...sample,title:'',photo:''};
     newPhotos=storedPhotos(l);draftDocuments={...(l.documents||{})};photoPending=false;photoJob++;
@@ -480,21 +461,11 @@
   function available(l){return l&&['active','away'].includes(l.status)}
   const featuredPlaces = { sample: termletRooms.sample, annex: termletRooms.annex, newToronto: termletRooms.newToronto };
   function listings(){const rooms={...(verified()&&available(model.listing)?{own:model.listing}:{}),...featuredPlaces,...termletRooms};return Object.fromEntries(Object.entries(rooms).map(([key,l])=>[key,{...(key==='own'?{}:demoHousehold(key,l)),...l,promotion:l.promotion||({sample:'featured',annex:'boosted'}[key])||'standard'}]));}
-function roomPicture(room){
-  if(room.gallerySheet)return `<div class="room-pic">${photoMarkup({src:mediaUrl(room.image),alt:room.alt,sheet:true,index:0},true)}</div>`;
-  if(room.tile)return `<div class="room-pic room-tile tile-${esc(room.tile)}" role="img" aria-label="${esc(room.alt)}"></div>`;
-  return `<div class="room-pic"><img src="${esc(mediaUrl(room.image||photo(room)))}" decoding="async" loading="lazy" alt="${esc(room.alt||room.title)}"></div>`;
-}
-
-function listingCard(key,l){
-  const href='#room/'+key;
-  const place=l.area&&l.area!==l.city?`${l.area} · ${l.city}`:l.city||l.campus;
-  return `<article class="card listing-card" data-listing="${esc(key)}" data-promotion="${esc(l.promotion||'standard')}"><a class="card-image-link" href="${href}" aria-label="View ${esc(l.title)}">${roomPicture(l)}</a><div class="copy">${sponsorBadge(l)}${l.luxury?'<span class="luxury-tag">Luxury</span>':''}<p class="card-place">${esc(place)}</p><h3 class="card-title"><a href="${href}">${esc(l.title)}</a></h3><p class="card-campus">${esc(l.campusLabel||l.campus)}</p><p class="card-household">${esc(householdSummary(l))}</p><p class="card-facts">${esc(l.type||'Student sublet')} · ${esc(monthName(l.start,l.vacant))} – ${esc(monthName(l.end))}</p><div class="card-bottom"><span><strong>${money(l.ask)}</strong> <small>/ month</small></span><a href="${href}" class="view-link" aria-label="View room: ${esc(l.title)}">View room <span aria-hidden="true">→</span></a></div></div></article>`;
-}
-
-function featured(){
-  const items=sponsoredFirst(Object.entries(listings())).slice(0,3).map(([key,place])=>listingCard(key,place)).join('');
-  return `<section class="featured"><div class="section-head"><h2>Explore student sublets</h2><a class="view-link" href="#browse">Browse all <span aria-hidden="true">→</span></a></div><div class="grid-cards">${items}</div><p class="footnote">Sample homes in Waterloo Region and the Greater Toronto Area. Sponsored listings reflect optional paid promotion.</p></section>`;
+function cardItem([id, room]) {
+  const plan = promotionFor(room);
+  return { id, room, image: room.image || photo(room), price: money(room.ask),
+    dates: monthName(room.start,room.vacant)+' – '+monthName(room.end),
+    household: householdSummary(room), sponsor: plan.rank ? plan.name : '' };
 }
 
 function monthBreakdown(l,matched){
@@ -558,23 +529,13 @@ function searchResults(rooms){
     ? money(Number(filterMin))+'–'+money(Number(filterBudget))+' per month'
     : limitedBudget ? 'Up to '+money(Number(filterBudget))+' per month'
     : filterMin ? 'From '+money(Number(filterMin))+' per month' : '';
-  return `    <div class="result-summary"><h2 id="results-title" tabindex="-1" aria-live="polite">${filtered.length} ${filtered.length===1?'place':'places'} ${applied?(filtered.length===1?'matches your search':'match your search'):'to explore'}</h2>${applied?'<button type="button" class="plain-button" data-act="clear">Clear filters</button>':''}</div>
-    ${budgetSummary ? `<p class="budget-summary">${esc(budgetSummary)}</p>` : ''}
-    <p class="market-note">Sample listings in real neighbourhoods. Rents are illustrative and shown in Canadian dollars. Up to two sponsored matches appear first; every result meets your filters.</p>
-    <div class="grid-cards">${filtered.length?sponsoredFirst(filtered).map(([k,l])=>listingCard(k,l)).join(''):`<div class="empty"><h3>No rooms fit these filters</h3><p>Try another campus, place type or household, raise the budget, or leave a month open.</p></div>`}</div>`;
+  return <SearchResults items={sponsoredFirst(filtered).map(cardItem)} applied={applied} budgetSummary={budgetSummary}/>;
 }
 
 function browse(){
-  const rooms=listings(), dates=termFilters(rooms);
-  return `${head('Find a sublet','Find a place for your full term in Waterloo Region or the Greater Toronto Area.')}
-    <form class="filters market-filters" id="filter-form" novalidate>
-    <label>Campus or region<select name="school">${campusOptions(filterSchool,true)}</select></label>
-    <label>Place type<select name="placeType">${option('','Any type',filterType)}${option('entire','Entire place',filterType)}${option('private','Private room',filterType)}</select></label>
-    ${dates.term}
-    <label class="household-filter">Household<select name="household">${option('','No preference',filterHousehold)}${['women','men','mixed','nonbinary','none'].map(value=>option(value,householdOptions[value],filterHousehold)).join('')}</select></label>
-    ${budgetFields(rooms)}
-    ${dates.custom}<p class="error filter-error" id="filter-error" role="alert"></p></form>
-    <section id="search-results" aria-label="Search results">${searchResults(rooms)}</section>`;
+  const current = { school:filterSchool, type:filterType, household:filterHousehold, term:filterTerm, from:filterStart, until:filterEnd };
+  const households = ['women','men','mixed','nonbinary','none'].map(value=>[value,householdOptions[value]]);
+  return <SearchFilters current={current} {...termFilters(listings())} households={households} budget={budgetFields()}/>;
 }
 
 function applyFilters(form){
@@ -584,16 +545,11 @@ function applyFilters(form){
   filterSchool=String(data.get('school'));filterType=String(data.get('placeType'));filterHousehold=String(data.get('household')||'');
   filterBudget=String(data.get('budget'));
   filterMin=data.get('minBudget')==='0'?'':String(data.get('minBudget'));
-  const results=document.getElementById('search-results'),next=document.createElement('template');
-  const currentCards=new Map([...results.querySelectorAll('.listing-card')].map(card=>[card.dataset.listing,card]));
-  const oldKeys=[...currentCards.keys()].join('|');
-  next.innerHTML=searchResults(listings());
-  const nextGrid=next.content.querySelector('.grid-cards');
-  const nextKeys=[...nextGrid.querySelectorAll('.listing-card')].map(card=>card.dataset.listing).join('|');
-  if(oldKeys===nextKeys)nextGrid.replaceWith(results.querySelector('.grid-cards'));
-  else for(const card of nextGrid.querySelectorAll('.listing-card')){const existing=currentCards.get(card.dataset.listing);if(existing)card.replaceWith(existing);}
-  results.replaceChildren(next.content);
-  if(oldKeys!==nextKeys)fadeResults(results.querySelector('.grid-cards'),currentCards);
+  const results=document.getElementById('search-results');
+  const previous=new Map([...results.querySelectorAll('.listing-card')].map(card=>[card.dataset.listing,card]));
+  mount(results, searchResults(listings()));
+  const keys=[...results.querySelectorAll('.listing-card')].map(card=>card.dataset.listing);
+  if(keys.join('|')!==[...previous.keys()].join('|'))fadeResults(results.querySelector('.grid-cards'),previous);
 
 }
 
@@ -618,19 +574,56 @@ function room(key){
   if(requested&&!model.stays[key]){newStay(key,l);save();}
   const months=duration(l)-l.vacant;
   return `${head(l.title,where,'browse','Search results')}${promotionFor(l).rank?`<p class="sponsor-disclosure">${sponsorBadge(l)} <span>The leaseholder chose paid promotion.</span></p>`:''}<div class="layout details">
-    <section class="panel detail-room">${gallery(key,l)}<h2>About this place</h2><p>${esc(l.description||'A student sublet listed for the dates shown. Termlet handles the search and coordinates requests with the leaseholder.')}</p>
+    <section class="panel detail-room"><div id="room-gallery"></div><h2>About this place</h2><p>${esc(l.description||'A student sublet listed for the dates shown. Termlet handles the search and coordinates requests with the leaseholder.')}</p>
     ${l.features?`<ul class="amenities">${l.features.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:''}
     ${l.luxury?'<p class="help mini">Luxury demo apartment · The monthly price covers the entire unit. Interiors and pricing are illustrative.</p>':''}${householdDetails(l)}<h3>Campus and neighbourhood</h3><p>${esc(l.local||l.campus)}</p>${l.source?`<a href="${esc(l.source)}" target="_blank" rel="noopener" class="inline local-source">${l.image?'Official campus guide':'Local area guide'} <span class="arrow" aria-hidden="true">↗</span></a>`:''}</section>
     <aside class="panel side request-panel"><p class="metric-label">Monthly sublet rent</p><h2>${money(l.ask)} <small>/ month</small></h2>
     ${row('Available from',monthName(l.start,l.vacant))}${row('Through',monthName(l.end))}${row('Full listing term',months+' '+(months===1?'month':'months'))}${row('Total rent for these dates',money(cents(months*l.ask)),true)}
     ${requested?`<div class="status-note" role="status"><h3>Request received</h3><p>Termlet would coordinate this request with the leaseholder. You can withdraw it if your plans change.</p></div><div class="actions">${link('stay/'+key,'Open my stay')}${act('withdraw-'+key,'Withdraw request',true)}</div>`:`<p class="help mini">Your request covers all listed months. Termlet’s service fee is paid from the leaseholder’s sublet income.</p><div class="actions">${act('request-'+key,'Request these dates')}</div>`}</aside></div>`;
 }
+  function marketplaceView(path) {
+    if (path === 'stays') return stays();
+    if (path.startsWith('stay/')) return stayPortal(path.slice(5));
+    if (path === 'guide') return guide();
+    if (path === 'list' || path === 'dashboard') {
+      if (!verified() && (path === 'list' || model.listing)) return <StudentCheck/>;
+      if (path === 'dashboard' || (model.listing && model.listing.status !== 'review')) return dashboard();
+      return list();
+    }
+    if (path === 'browse') return browse();
+    if (path.startsWith('room/')) return room(path.slice(5));
+    return home();
+  }
+
   function render(){
     if(budgetCleanup)budgetCleanup();
     if(activePicker){activePicker.close();activePicker.remove();activePicker=null;}
     const path=location.hash.slice(1)||'home';
-    let html;if(path==='home')html=home();else if(path==='stays')html=stays();else if(path.startsWith('stay/'))html=stayPortal(path.slice(5));else if(path==='guide')html=guide();else if((path==='list'||(path==='dashboard'&&model.listing))&&!verified())html=studentCheck();else if(path==='dashboard')html=dashboard();else if(path==='list')html=model.listing&&model.listing.status!=='review'?dashboard():list();else if(path==='browse')html=browse();else if(path.startsWith('room/'))html=room(path.slice(5));else html=home();
-    main.innerHTML=html;
+    for (const root of [...roots.values()].reverse()) root.unmount();
+    roots.clear();
+    if (path === 'design' || path.startsWith('design/')) {
+      main.replaceChildren();
+      mount(main, <DesignDashboard route={path} sample={cardItem(['sample', listings().sample])}/>);
+      document.title = 'Design system · Termlet';
+      document.querySelectorAll('.top [aria-current]').forEach(link => link.removeAttribute('aria-current'));
+      window.scrollTo(0,0);
+      return;
+    }
+    const view = marketplaceView(path);
+    if (typeof view === 'string') main.innerHTML = view;
+    else mount(main, view);
+    const payments = main.querySelector('[data-bills]');
+    if (payments) {
+      const scope = payments.dataset.bills;
+      const bills = scope==='owner' ? ownerBills(model.listing) : stayBills(model.stays[scope.slice(5)]);
+      mount(payments, <PaymentTable bills={bills} scope={scope} money={money} dueDate={dueDate}/>);
+    }
+    const gallery = main.querySelector('#room-gallery');
+    if (gallery) {
+      const key = path.slice(5);
+      mount(gallery, <Gallery photos={photosFor(key, listings()[key])}/>);
+    }
+    if (path === 'browse') mount(main.querySelector('#search-results'), searchResults(listings()));
     for(const item of document.querySelectorAll('nav a')){
       const active=item.hash==='#browse'?(path==='browse'||path.startsWith('room/')):item.hash==='#stays'?(path==='stays'||path.startsWith('stay/')):(path==='list'||path==='dashboard');
       if(active)item.setAttribute('aria-current','page');else item.removeAttribute('aria-current');
@@ -680,12 +673,6 @@ function room(key){
     } catch {if(input.isConnected&&job===photoJob)error.textContent='One image could not be opened. Try another file.';}
     finally {if(job===photoJob){photoPending=false;input.disabled=false;}}
   });
-  main.addEventListener('keydown',e=>{
-    const el=e.target.closest('.photo-gallery');
-    if(!el||!['ArrowLeft','ArrowRight'].includes(e.key)||!el.querySelector('.gallery-thumbs'))return;
-    e.preventDefault();showPhoto(el,e.key==='ArrowLeft'?-1:1);
-    if(e.target.matches('[data-photo-index]'))el.querySelector('[aria-pressed="true"]').focus();
-  });
   main.addEventListener('submit',e=>{
     e.preventDefault();const form=e.target,fd=new FormData(form);
     if(form.id==='verify-form'){
@@ -728,8 +715,6 @@ function room(key){
       if(!target)return;const bill=(owner?ownerBills(target):stayBills(target)).find(b=>b.key===key);
       if(bill?.confirmed&&bill.paid<bill.amount){target.payments ||= {};target.payments[key]={amount:bill.amount,receipt:'DEMO-'+key.replace('-','')};save();render();focusPanel('.payments-panel');}return;
     }
-    const photoButton=e.target.closest('[data-photo-step],[data-photo-index]');
-    if(photoButton){showPhoto(photoButton.closest('.photo-gallery'),Number(photoButton.dataset.photoStep),photoButton.hasAttribute('data-photo-index')?Number(photoButton.dataset.photoIndex):undefined);return;}
     const remove=e.target.closest('[data-remove-photo]');
     if(remove){newPhotos.splice(Number(remove.dataset.removePhoto),1);drawPhotos();document.querySelector('.photo-choice').focus();return;}
     const button=e.target.closest('[data-act]');if(!button)return;
@@ -769,4 +754,4 @@ function room(key){
   });
   document.querySelector('.skip').addEventListener('click',e=>{e.preventDefault();main.focus();main.scrollIntoView()});
   window.addEventListener('hashchange',()=>{render();main.focus({preventScroll:true})});render();
-})();
+}
