@@ -3,6 +3,8 @@ import { MarketSelect, PickerContext, PickerContents, PickerChoices } from './co
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { PaymentTable } from './components/PaymentTable';
+import { RentRange } from './components/RentRange';
+import { budgetPositionFor, budgetValueAt, budgetCeiling } from './components/budgetScale';
 import { SearchFilters } from './components/SearchFilters';
 import { Gallery } from './components/Gallery';
 import { StudentCheck, PageHead } from './components/StudentCheck';
@@ -66,7 +68,6 @@ export function startMarketplace(examplesOnly = false){
     catch {document.getElementById('storage-status').textContent='This tab could not save your changes. Keep it open to continue this demo.';}
   }
   let newPhotos=[],photoPending=false,photoJob=0;
-  const budgetKnee=4500,budgetCeiling=10000;
   let filterSchool='',filterMin='',filterBudget=String(budgetCeiling),filterTerm='',filterStart='',filterEnd='',filterType='',filterHousehold='';
   let budgetCleanup = null;
   const mediaUrl = path => path;
@@ -113,26 +114,14 @@ export function startMarketplace(examplesOnly = false){
     });
     return { terms: termOptions, months: monthChoices.map(d=>[d,monthName(d)]) };
   }
-  function budgetValueAt(position) {
-    const p=Math.max(0,Math.min(1,position));
-    if(p<=.75)return budgetKnee*p/.75;
-    const t=(p-.75)/.25,entry=budgetKnee/3;
-    return budgetKnee+entry*t+(budgetCeiling-budgetKnee-entry)*t*t;
-  }
-  function budgetPositionFor(value) {
-    const v=Math.max(0,Math.min(budgetCeiling,value));
-    if(v<=budgetKnee)return .75*v/budgetKnee;
-    const entry=budgetKnee/3,curve=budgetCeiling-budgetKnee-entry;
-    return .75+.25*(Math.sqrt(entry*entry+4*curve*(v-budgetKnee))-entry)/(2*curve);
-  }
-  function budgetFields() {
+  function budgetFields(rooms) {
+    const prices = marketMatches(rooms)
+      .map(([, room]) => room.ask)
+      .filter(price => price <= budgetCeiling);
     return (
       <UI.BudgetField>
         <UI.Label as="legend">Monthly rent (CAD)</UI.Label>
-        <UI.BudgetTrack aria-describedby="budget-step">
-          <UI.BudgetRail aria-hidden="true">
-            <UI.BudgetSelection></UI.BudgetSelection>
-          </UI.BudgetRail>
+        <RentRange prices={prices} describedBy="budget-step">
           <UI.RangeField
             id="rent-min"
             type="range"
@@ -155,15 +144,7 @@ export function startMarketplace(examplesOnly = false){
             aria-label="Maximum monthly rent"
             aria-describedby="budget-step"
           />
-          <UI.BudgetLower aria-hidden="true"></UI.BudgetLower>
-          <UI.BudgetUpper aria-hidden="true"></UI.BudgetUpper>
-          <UI.BudgetBubble as="output" aria-hidden="true"></UI.BudgetBubble>
-          <UI.BudgetAxis aria-hidden="true">
-            <span>{money(0)}</span>
-            <span>{money(budgetKnee)}</span>
-            <span>{money(budgetCeiling)}</span>
-          </UI.BudgetAxis>
-        </UI.BudgetTrack>
+        </RentRange>
         <UI.BudgetEndpoints>
           <UI.Label htmlFor="rent-min">
             Minimum <output id="rent-min-value"></output>
@@ -248,8 +229,10 @@ export function startMarketplace(examplesOnly = false){
     };
     paint(Number(lower.value),Number(upper.value));
     track.addEventListener('pointerdown',event=>{
-      if(!event.isPrimary||event.button!==0||dragging)return;event.preventDefault();
-      const r=track.getBoundingClientRect(),width=r.width-32,left=r.left+16;
+      if(!event.isPrimary || event.button !== 0 || dragging || !event.target.closest('.budget-glass')) return;
+      event.preventDefault();
+      const rail = track.querySelector('.budget-rail').getBoundingClientRect();
+      const width = rail.width, left = rail.left;
       const low=Number(lower.value),high=Number(upper.value),lx=left+width*budgetPositionFor(low),hx=left+width*budgetPositionFor(high);
       const a=Math.abs(event.clientX-lx),b=Math.abs(event.clientX-hx),onHandle=Math.min(a,b)<=Math.min(22,(hx-lx)/3);
       const nearest=low===high?(event.clientX<lx?lower:upper):a<b?lower:upper;
@@ -1299,17 +1282,22 @@ function availableFrom(l){
   return Math.floor(index/12)+'-'+String(index%12+1).padStart(2,'0');
 }
 
-function searchResults(rooms){
+function marketMatches(rooms){
   const targetCampuses=filterSchool.startsWith('region:') ? termletRegions[filterSchool.slice(7)].campuses : [filterSchool];
-  const filtered=Object.entries(rooms).filter(([,l])=>{
+  return Object.entries(rooms).filter(([,l])=>{
     if(filterSchool&&!targetCampuses.some(campus=>l.campus===campus||l.otherCampuses?.includes(campus)))return false;
     if(filterType==='entire'&&!['Entire apartment','Entire studio'].includes(l.type))return false;
     if(filterType==='private'&&l.type!=='Private room')return false;
     if(filterHousehold&&l.household!==filterHousehold)return false;
-    if(filterMin&&l.ask<Number(filterMin)||filterBudget&&l.ask>Number(filterBudget))return false;
     const start=availableFrom(l);
     return (!filterStart||filterStart===start)&&(!filterEnd||filterEnd===l.end);
   });
+}
+
+function searchResults(rooms){
+  const filtered = marketMatches(rooms).filter(([, room]) =>
+    room.ask >= Number(filterMin) && room.ask <= Number(filterBudget)
+  );
   const applied=!!(filterSchool||filterType||filterHousehold||filterMin||Number(filterBudget)<budgetCeiling||filterStart||filterEnd);
   const limitedBudget=Number(filterBudget)<budgetCeiling;
   const budgetSummary = filterMin && limitedBudget
@@ -1322,16 +1310,18 @@ function searchResults(rooms){
 function browse(){
   const current = { school:filterSchool, type:filterType, household:filterHousehold, term:filterTerm, from:filterStart, until:filterEnd };
   const households = ['women','men','mixed','nonbinary','none'].map(value=>[value,householdOptions[value]]);
-  return <SearchFilters current={current} {...termFilters(listings())} households={households} budget={budgetFields()}/>;
+  const rooms = listings();
+  return <SearchFilters current={current} {...termFilters(rooms)} households={households} budget={budgetFields(rooms)}/>;
 }
 
-function applyFilters(form){
+function applyFilters(form, refreshDistribution = false){
   const data=new FormData(form),term=String(data.get('term'));
   const [from,until]=term==='custom'?[String(data.get('from')),String(data.get('until'))]:term?term.split('/'):['',''];
   filterTerm=term;filterStart=from;filterEnd=until;
   filterSchool=String(data.get('school'));filterType=String(data.get('placeType'));filterHousehold=String(data.get('household')||'');
   filterBudget=String(data.get('budget'));
   filterMin=data.get('minBudget')==='0'?'':String(data.get('minBudget'));
+  if (refreshDistribution) mount(main, browse());
   const results=document.getElementById('search-results');
   const previous=new Map([...results.querySelectorAll('.listing-card')].map(card=>[card.dataset.listing,card]));
   mount(results, searchResults(listings()));
@@ -1583,7 +1573,7 @@ function fadeResults(grid,previous=new Map()) {
     }
     if(form?.id==='filter-form'){
       if(input.name==='term') form.querySelector('.custom-months').hidden=input.value!=='custom';
-      limitChoices(form);applyFilters(form);return;
+      limitChoices(form);applyFilters(form, input.type !== 'range');return;
     }
     if(form?.id==='verify-form'){form.querySelector('#verify-error').textContent='';return}
     if(input.name!=='photo'||!input.files?.length)return;
@@ -1611,7 +1601,7 @@ function fadeResults(grid,previous=new Map()) {
       model.studentCheck='enrolled-demo';save();go(model.listing&&model.listing.status!=='review'?'dashboard':'list');main.focus();return;
     }
     if(form.id==='filter-form'){
-      applyFilters(form);document.querySelector('#results-title').focus();return;
+      applyFilters(form, true);document.querySelector('#results-title').focus();return;
     }
     if(form.id!=='listing-form'||!verified())return;
     const title=String(fd.get('title')).trim(),rent=Number(fd.get('rent')),ask=Number(fd.get('ask')),start=fd.get('startYear')+'-'+fd.get('startMonth'),end=fd.get('endYear')+'-'+fd.get('endMonth'),campus=String(fd.get('campus'));

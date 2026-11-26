@@ -82,7 +82,7 @@ define('Icon','span',null);
 classes('Icon','span','mark brand-dot arrow picker-check');
 define('MarkBar','i','.mark i','Icon');
 define('BudgetControl','div',null);
-classes('BudgetControl','div','budget-track budget-rail budget-selection budget-handle budget-bubble budget-axis budget-endpoints');
+classes('BudgetControl','div','budget-track budget-histogram budget-bin budget-glass budget-rail budget-selection budget-handle budget-bubble budget-axis budget-endpoints');
 classes('BudgetHandle','span','budget-lower budget-upper');
 define('PickerPart','div',null);
 classes('PickerPart','div','picker-header picker-search-wrap picker-options picker-group picker-option picker-empty');

@@ -7,6 +7,15 @@ const capture = (name, version) => ({
 });
 
 export const iterations = [{
+  id: '010', name: 'Layered rent filter', previousPreview: 'https://hendintom.github.io/Termlet/iterations/009-soft-pointer/', changes: [
+    { id: 'rent-range', area: 'Marketplace', name: 'Monthly rent filter', status: 'Updated',
+      note: 'Two handles sit on a translucent rail in front of the rent distribution. Both captures show a monthly budget of $850 to $2,200.',
+      before: capture('rent-range', '009'), after: capture('rent-range', '010'), context: '#browse' },
+    { id: 'rent-histogram', area: 'Marketplace', name: 'Rent histogram', status: 'Added',
+      note: 'Bars show the monthly asking rents for listings matching the other search filters. The selected budget highlights the corresponding portion of the chart.',
+      after: capture('rent-histogram', '010'), context: '#design/components/BudgetHistogram' }
+  ]
+}, {
   id: '009', name: 'Soft pointer and hero hover', previousPreview: 'https://hendintom.github.io/Termlet/iterations/008-card-glow/', changes: [
     { id: 'pointer', area: 'Interactions', name: 'Adaptive cursor', status: 'Updated',
       note: 'A compact triangle with three rounded corners marks the pointer position.',

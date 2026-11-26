@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { loadSpecimens } from './specimens';
 import { CursorGlow } from '../components/CursorGlow';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { RentRange } from '../components/RentRange';
+import { budgetPositionFor } from '../components/budgetScale';
+import { termletRooms } from '../catalog';
 import { UI } from '../components/UI';
 import { components, componentName } from '../components/catalog';
 import { ListingCard, PriceRow } from '../components/Marketplace';
@@ -41,22 +44,11 @@ function BudgetExample() {
     <div className="market-filters specimen-budget">
       <UI.BudgetField>
         <legend>Monthly rent (CAD)</legend>
-        <UI.BudgetTrack style={{ '--low': 0.2, '--high': 0.8, '--active-position': 0.8 }}>
-          <UI.BudgetRail>
-            <UI.BudgetSelection />
-          </UI.BudgetRail>
-          <UI.BudgetLower />
-          <UI.BudgetUpper />
-          <UI.BudgetBubble style={{ opacity: 1 }}>$1,200</UI.BudgetBubble>
-          <UI.BudgetAxis>
-            <span>$0</span>
-            <span>$4,500</span>
-            <span>$10,000</span>
-          </UI.BudgetAxis>
-        </UI.BudgetTrack>
+        <RentRange prices={Object.values(termletRooms).map(room => room.ask)}
+          style={{ '--low': budgetPositionFor(850), '--high': budgetPositionFor(2200) }} />
         <UI.BudgetEndpoints>
-          <span>Minimum</span>
-          <span>Maximum</span>
+          <label>Minimum <output>$850</output></label>
+          <label>Maximum <output>$2,200</output></label>
         </UI.BudgetEndpoints>
       </UI.BudgetField>
     </div>
