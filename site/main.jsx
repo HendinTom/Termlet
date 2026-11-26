@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { FooterLinks } from './components/Marketplace';
 import { startMarketplace } from './marketplace';
+import { CursorGlow } from './components/CursorGlow';
 import { ThemeToggle } from './components/ThemeToggle';
 import { restoreTokens } from './design/tokens';
 import './theme.css';
@@ -11,6 +12,7 @@ import { restoreStyles } from './design/componentStyles';
 function Shell() {
   return (
     <>
+      <CursorGlow />
       <UI.Skip href="#main">Skip to content</UI.Skip>
       <UI.PageHeader>
         <UI.Shell className="nav">

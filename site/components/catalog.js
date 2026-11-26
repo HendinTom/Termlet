@@ -77,6 +77,7 @@ define('Media','figure',null);
 classes('Media','div','photo-gallery gallery-stage gallery-main gallery-thumbs gallery-caption room-pic sheet-view hero-sponsored hero-caption photo-caption photo-preview upload-thumb sidebar-photo');
 define('Image','img','img','Media');
 define('RoomTile','div','.room-tile','RoomPic','room-tile');
+define('CursorGlow','span','.cursor-glow',null,'cursor-glow');
 define('Icon','span',null);
 classes('Icon','span','mark brand-dot arrow picker-check');
 define('MarkBar','i','.mark i','Icon');

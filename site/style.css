@@ -23,7 +23,10 @@
   --paper: var(--base-ink);
   color-scheme: dark;
 }
-::selection { background: var(--accent-readable); color: var(--base-paper); }
+::selection {
+  background-color: var(--selection-bg, var(--accent-readable));
+  color: var(--selection-fg, var(--base-paper));
+}
 ::placeholder { color: var(--muted); opacity: 1; }
 ::file-selector-button { background: var(--tint); border: 1px solid var(--line-strong); color: var(--ink); }
 ::file-selector-button:hover { background: var(--pale); }

@@ -12,6 +12,8 @@ Open **Design system** in the marketplace footer. **Changes** opens the manually
 
 The moon/sun button beside the Termlet logo switches between light and dark mode. Dark mode exchanges the two neutral roles and preserves both accent values. The browser remembers the choice.
 
+Under **Components → Cursor Glow**, adjust the diameter, blur and intensity of the secondary-accent gradient. The live glow follows a hovering pointer and respects reduced motion. Selecting primary-accent text uses the secondary highlight.
+
 The palette includes ink, paper, a primary accent and a secondary accent for small highlights. Define new primitives and their parents in `site/components/catalog.js`. The marketplace and catalog use the same React components. Component edits cascade by family and property.
 
 For each visual change, add a record in `site/design/history.js` under its iteration and UI area. Capture the same component, content, state and viewport at both revisions. Use desktop and mobile crops, store them in `site/public/history/<iteration>/`, and reuse older captures when the fixture matches. Keep all previous records and images. Added components have only an After; removed components have only a Before. A code-only migration does not create a visual change entry.

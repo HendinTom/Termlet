@@ -2,4 +2,5 @@
 @import './style.css' layer(baseline);
 @import './design/tones.css' layer(baseline);
 @import './design/design.css' layer(baseline);
+@import './components/cursor-glow.css' layer(baseline);
 @import './marketplace-layout.css' layer(baseline);

@@ -7,6 +7,15 @@ const capture = (name, version) => ({
 });
 
 export const iterations = [{
+  id: '005', name: 'Cursor and selection', previousPreview: 'https://hendintom.github.io/Termlet/iterations/004-home-listings/', changes: [
+    { id: 'cursor-glow', area: 'Interactions', name: 'Cursor glow', status: 'Added',
+      note: 'A soft secondary-accent gradient follows a hovering pointer. Adjust its diameter, blur and intensity in Components. The centered sample also previews the effect on touchscreens.',
+      after: capture('cursor-glow','005'), context: '#design/components/CursorGlow' },
+    { id: 'accent-selection', area: 'Interactions', name: 'Accent text selection', status: 'Updated',
+      note: 'Select the emphasized words in the home headline to see the secondary highlight alongside the regular primary highlight.',
+      before: capture('accent-selection','004'), after: capture('accent-selection','005'), context: '#home' }
+  ]
+}, {
   id: '004', name: 'Home page listings', previousPreview: 'https://hendintom.github.io/Termlet/iterations/003-hex-colors/', changes: [
     { id: 'rent-explainer', area: 'Home page', name: 'How the rent works', status: 'Removed',
       note: 'The home page now leads directly from the introduction to featured student sublets.',

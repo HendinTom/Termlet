@@ -4,6 +4,7 @@ import { UI } from '../components/UI';
 import { components, componentName, descendants, families, childrenOf } from '../components/catalog';
 import { baseTypography, colors, fonts, fontNames, useComponentStyles, saveStyles } from './componentStyles';
 import { ListingCard } from '../components/Marketplace';
+import { glowControls } from '../components/glowControls';
 import { ComponentPreview } from './ComponentPreview';
 
 function FontOptions() {
@@ -180,6 +181,13 @@ export function ComponentEditor({ initialId, sample, getExamples }) {
           <UI.Heading>{componentName(id)}</UI.Heading>
           <ComponentPreview id={id} sample={sample} getExamples={getExamples} />
           <div className="component-fields">
+            {id === 'CursorGlow' ? glowControls.map(({ key, label, min, max, initial, unit }) => (
+              <UI.Label key={key}>
+                {label} <output>{edit[key] ?? initial}{unit}</output>
+                <UI.RangeField type="range" aria-label={label} min={min} max={max}
+                  value={edit[key] ?? initial} onChange={(event) => change(key, Number(event.target.value))} />
+              </UI.Label>
+            )) : <>
             {[
               ['fill', 'Fill'],
               ['text', 'Text color'],
@@ -245,6 +253,7 @@ export function ComponentEditor({ initialId, sample, getExamples }) {
               </UI.Label>
               {explicitHue && <UI.PlainButton onClick={() => change('hue', '')}>Inherit hue</UI.PlainButton>}
             </div>
+            </>}
           </div>
           <UI.PlainButton disabled={!Object.keys(edit).length} onClick={() => save({})}>
             Reset this component

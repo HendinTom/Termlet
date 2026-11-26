@@ -1,3 +1,5 @@
+import { selectionColors } from './selection';
+import { glowControls } from '../components/glowControls';
 import { iterations } from './history';
 import { useSyncExternalStore } from 'react';
 import { components, descendants, families } from '../components/catalog';
@@ -72,6 +74,10 @@ function declarations(edit) {
     if (name === 'font' && own(fonts, value)) rules.push(prop + ':' + fonts[value]);
     if (name === 'size' && inRange(value, 10, 64)) rules.push(prop + ':' + value / 16 + 'rem');
     if (!['fill', 'text', 'border'].includes(name)) continue;
+    if (name === 'text' && (value === 'none' || own(colors, value))) {
+      const [background, foreground] = selectionColors(colors[value] || 'inherit');
+      rules.push('--selection-bg:' + background, '--selection-fg:' + foreground);
+    }
     if (own(colors, value)) rules.push(prop + ':' + colors[value]);
     if (value === 'none') rules.push(prop + ':' + (name === 'text' ? 'inherit' : 'transparent'));
     if (name === 'border' && own(colors, value)) rules.push('border-style:solid', 'border-width:1px');
@@ -132,7 +138,11 @@ export function restoreStyles() {
     edits: {}
   };
   for (const [id, edit] of Object.entries(stored?.edits || {})) {
-    if (own(components, id) && edit && typeof edit === 'object' && declarations(edit)) state.edits[id] = edit;
+    if (!own(components, id) || !edit || typeof edit !== 'object') continue;
+    if (id === 'CursorGlow') {
+      const valid = glowControls.filter(({ key, min, max }) => inRange(edit[key], min, max));
+      if (valid.length) state.edits[id] = Object.fromEntries(valid.map(({ key }) => [key, edit[key]]));
+    } else if (declarations(edit)) state.edits[id] = edit;
   }
   publish(state);
   return state;

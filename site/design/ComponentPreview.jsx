@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { loadSpecimens } from './specimens';
+import { CursorGlow } from '../components/CursorGlow';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { UI } from '../components/UI';
 import { components, componentName } from '../components/catalog';
@@ -66,6 +67,7 @@ function Specimen({ id, sample, examples }) {
     Part = UI[id];
   let family = item;
   while (family.parent) family = components[family.parent];
+  if (id === 'CursorGlow') return <CursorGlow specimen />;
   if (id === 'ThemeToggle') return <ThemeToggle/>;
   if (id === 'CardBottom')
     return <PriceRow price={sample.price} title={sample.room.title} href="#room/sample" />;

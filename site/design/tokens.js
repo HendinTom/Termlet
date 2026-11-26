@@ -58,8 +58,24 @@ export function restoreTokens() {
   return values;
 }
 
+// Choose the existing neutral with the greater contrast against the secondary highlight.
+function luminance(hex) {
+  const [r, g, b] = hex.slice(1).match(/../g).map(pair => {
+    const value = parseInt(pair, 16) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
 export function applyTokens(values) {
   current = values;
+  const secondary = luminance(values['--secondary']);
+  const contrast = hex => {
+    const neutral = luminance(hex);
+    return (Math.max(neutral, secondary) + 0.05) / (Math.min(neutral, secondary) + 0.05);
+  };
+  const ink = values['--ink'], paper = values['--paper'];
+  document.documentElement.style.setProperty('--on-secondary', contrast(ink) >= contrast(paper) ? ink : paper);
   for (const t of tokens)
     document.documentElement.style.setProperty(neutralKeys[t.key] || t.key, t.max ? values[t.key] + 'px' : values[t.key]);
   applyAppearance();

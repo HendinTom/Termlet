@@ -1,0 +1,39 @@
+.cursor-glow-layer {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 0;
+  overflow: clip;
+  background: transparent;
+  pointer-events: none;
+  z-index: 100;
+}
+.cursor-glow-layer::backdrop { background: transparent; pointer-events: none; }
+.cursor-glow {
+  display: block;
+  width: var(--diameter);
+  height: var(--diameter);
+  border-radius: 50%;
+  background: radial-gradient(circle closest-side, var(--secondary), transparent);
+  filter: blur(var(--blur));
+  opacity: var(--intensity);
+  pointer-events: none;
+}
+.cursor-glow-layer > .cursor-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  will-change: translate;
+}
+.cursor-glow-specimen {
+  display: grid;
+  place-content: center;
+  height: 180px;
+  overflow: clip;
+}
