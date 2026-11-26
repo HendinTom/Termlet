@@ -184,7 +184,6 @@ function DesignMap({ sample }) {
     const observer = new ResizeObserver(measure);
     observer.observe(board.current);
     measure();
-    fit();
     return () => observer.disconnect();
   }, []);
   return (

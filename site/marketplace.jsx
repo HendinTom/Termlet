@@ -8,6 +8,7 @@ import { Gallery } from './components/Gallery';
 import { StudentCheck, PageHead } from './components/StudentCheck';
 import { Home } from './components/Home';
 import { SearchResults } from './components/Marketplace';
+import { rememberNavigation } from './design/navigation';
 import { DesignDashboard } from './design/Dashboard';
 import { termletRooms, termletRegions, termletGalleryLabels } from './catalog';
 
@@ -1480,11 +1481,12 @@ function fadeResults(grid,previous=new Map()) {
     for (const root of [...roots.values()].reverse()) root.unmount();
     roots.clear();
     if (path === 'design' || path.startsWith('design/')) {
+      window.scrollTo(0,0);
+      rememberNavigation({ route: path });
       main.replaceChildren();
       mount(main, <DesignDashboard getExamples={makeExamples} route={path} sample={cardItem(['sample', listings().sample])}/>);
       document.title = 'Design system · Termlet';
       document.querySelectorAll('.top [aria-current]').forEach(link => link.removeAttribute('aria-current'));
-      window.scrollTo(0,0);
       return;
     }
     const view = marketplaceView(path);

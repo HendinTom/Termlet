@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { editorLocation, rememberNavigation } from './navigation';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { UI } from '../components/UI';
 import { components, componentName, descendants, families, childrenOf } from '../components/catalog';
 import { baseTypography, colors, fonts, fontNames, useComponentStyles, saveStyles } from './componentStyles';
@@ -55,7 +56,7 @@ function ancestry(id) {
   return path;
 }
 
-function ComponentList({ selected, choose, query, edits }) {
+function ComponentList({ selected, choose, query, edits, listRef }) {
   const term = query.trim().toLowerCase();
   const path = ancestry(selected);
   function row(item) {
@@ -76,7 +77,7 @@ function ComponentList({ selected, choose, query, edits }) {
     if (!children.length) return <li key={item.id}>{link}</li>;
     return (
       <li key={item.id}>
-        <details open={term || path.includes(item.id) ? true : undefined}>
+        <details data-family={item.id} open={term || path.includes(item.id) ? true : undefined}>
           <summary>{componentName(item.id)}</summary>
           <ul>
             <li>{link}</li>
@@ -86,12 +87,37 @@ function ComponentList({ selected, choose, query, edits }) {
       </li>
     );
   }
-  return <ul className="catalog-list">{families.map(row)}</ul>;
+  return <ul className="catalog-list" ref={listRef}>{families.map(row)}</ul>;
 }
 
 export function ComponentEditor({ initialId, sample, getExamples }) {
-  const [id, setId] = useState(() => (Object.hasOwn(components, initialId) ? initialId : 'Button'));
-  const [query, setQuery] = useState('');
+  const [entry] = useState(() => editorLocation(initialId));
+  const [id, setId] = useState(entry.id);
+  const [query, setQuery] = useState(entry.query);
+  const listRef = useRef(null);
+  useLayoutEffect(() => {
+    const route = 'design/components/' + entry.id;
+    history.replaceState(history.state, '', '#' + route);
+    rememberNavigation({ ...entry, route });
+    const list = listRef.current;
+    for (const group of list.querySelectorAll('details')) {
+      if (entry.expanded.includes(group.dataset.family)) group.open = true;
+    }
+    list.scrollTop = entry.scroll;
+    window.scrollTo(0, entry.pageScroll);
+    function savePosition() {
+      rememberNavigation({
+        scroll: list.scrollTop,
+        pageScroll: window.scrollY,
+        expanded: [...list.querySelectorAll('details[open]')].map(group => group.dataset.family)
+      });
+    }
+    window.addEventListener('pagehide', savePosition);
+    return () => {
+      savePosition();
+      window.removeEventListener('pagehide', savePosition);
+    };
+  }, [entry]);
   const settings = useComponentStyles();
   const edit = settings.edits[id] || {};
   const path = ancestry(id);
@@ -116,8 +142,11 @@ export function ComponentEditor({ initialId, sample, getExamples }) {
     saveStyles(state);
   }
   function choose(key) {
+    if (key === id) return;
+    const route = 'design/components/' + key;
+    history.pushState(null, '', '#' + route);
+    rememberNavigation({id:key, route, query, scroll:listRef.current.scrollTop});
     setId(key);
-    history.replaceState(null, '', '#design/components/' + key);
   }
   const explicitHue = edit.hue !== undefined;
   const hueSource = path
@@ -133,11 +162,11 @@ export function ComponentEditor({ initialId, sample, getExamples }) {
           <UI.TextField
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {setQuery(e.target.value); rememberNavigation({query:e.target.value});}}
             placeholder="Button, card, gallery…"
           />
         </UI.Label>
-        <ComponentList selected={id} choose={choose} query={query} edits={settings.edits} />
+        <ComponentList listRef={listRef} selected={id} choose={choose} query={query} edits={settings.edits} />
       </UI.LabPanel>
       <div className="catalog-detail">
         <UI.LabPanel>

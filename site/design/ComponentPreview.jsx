@@ -5,6 +5,7 @@ import { components, componentName } from '../components/catalog';
 import { ListingCard, PriceRow } from '../components/Marketplace';
 import { Gallery } from '../components/Gallery';
 import { PaymentTable } from '../components/PaymentTable';
+import './specimen.css';
 
 const inputTypes = {
   ColorField: 'color',
@@ -91,7 +92,60 @@ function Specimen({ id, sample, examples }) {
   if (family.id === 'BudgetControl' || id === 'BudgetField') return <BudgetExample />;
   if (id === 'Button' || id === 'ActionButton') return <ButtonSet />;
   const actual = examples?.get(id);
-  if (actual && !['Skip', 'PickerClose'].includes(id)) return actual;
+  if (id === 'HeroSponsored' && actual) return <div className="hero specimen-hero">{actual}</div>;
+  if (id === 'Skip') return <UI.Skip href="#main">Skip to content</UI.Skip>;
+  if (id === 'Arrow') return <UI.Arrow aria-hidden="true">↗</UI.Arrow>;
+  if (id === 'MarkBar')
+    return (
+      <UI.Mark>
+        {[0, 1, 2].map((n) => (
+          <UI.MarkBar key={n} />
+        ))}
+      </UI.Mark>
+    );
+  if (id === 'PickerCheck')
+    return (
+      <UI.PickerOption aria-selected="true" role="option">
+        <span>University of Waterloo</span>
+        <UI.PickerCheck
+          as="svg"
+          aria-hidden="true"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+        >
+          <path d="m5 10 3.5 3.5L15 7" />
+        </UI.PickerCheck>
+      </UI.PickerOption>
+    );
+  if (id === 'MobileSides' || id === 'ComparisonButton')
+    return (
+      <UI.MobileSides>
+        <UI.ComparisonButton aria-pressed="false">Before</UI.ComparisonButton>
+        <UI.ComparisonButton aria-pressed="true">After</UI.ComparisonButton>
+      </UI.MobileSides>
+    );
+  if (id === 'MapTools' || id === 'MapButton')
+    return (
+      <UI.MapTools>
+        <UI.MapButton aria-label="Zoom out">−</UI.MapButton>
+        <output>100%</output>
+        <UI.MapButton aria-label="Zoom in">+</UI.MapButton>
+        <UI.MapButton>Fit</UI.MapButton>
+      </UI.MapTools>
+    );
+  if (id === 'MapBoard')
+    return (
+      <UI.MapBoard>
+        {['Foundations', 'Components', 'Screens'].map((name) => (
+          <section key={name}>
+            <UI.Heading as="h3">{name}</UI.Heading>
+          </section>
+        ))}
+      </UI.MapBoard>
+    );
+  if (actual && id !== 'PickerClose') return actual;
   if (family.id === 'Button')
     return (
       <Part type="button">

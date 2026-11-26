@@ -1,0 +1,21 @@
+.listing-card .luxury-tag {
+  align-self: flex-start;
+}
+
+/* Route changes focus the main landmark. Mark the heading at its entry point. */
+#main:focus-visible:has(h1) {
+  outline: none;
+}
+
+#main:focus-visible :is(.page-head, .hero) h1:not([inert] *) {
+  position: relative;
+}
+
+#main:focus-visible :is(.page-head, .hero) h1:not([inert] *)::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: -0.14em;
+  inset-block-start: 0.16em;
+  block-size: 0.7em;
+  border-inline-start: 3px solid var(--accent-readable);
+}

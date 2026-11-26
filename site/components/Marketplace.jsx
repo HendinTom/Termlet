@@ -1,9 +1,11 @@
+import { useDesignLink } from '../design/navigation';
 import { UI } from './UI';
 export function FooterLinks() {
+  const designLink = useDesignLink();
   return (
     <UI.FooterLinks>
       <UI.ViewLink href="#guide">Student guide</UI.ViewLink>
-      <UI.ViewLink href="#design">Design system</UI.ViewLink>
+      <UI.ViewLink href={designLink}>Design system</UI.ViewLink>
     </UI.FooterLinks>
   );
 }

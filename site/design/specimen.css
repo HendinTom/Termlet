@@ -1,0 +1,20 @@
+/* Show state-specific parts in isolation at either preview width. */
+@layer baseline {
+  .component-specimen > .skip { position: static; display: inline-block; }
+  .component-specimen > .arrow { display: inline; }
+  .component-specimen > .mobile-sides,
+  .component-specimen > .map-tools { display: flex; flex-wrap: wrap; }
+  .component-specimen > .mobile-sides [aria-pressed="true"] {
+    background: var(--accent-readable);
+    color: var(--paper);
+  }
+  .component-specimen > img { max-width: 100%; height: auto; display: block; }
+  .component-specimen > .specimen-hero { display: block; margin: 0; }
+  .component-specimen > .map-board {
+    width: auto;
+    position: relative;
+    grid-template-columns: repeat(auto-fit,minmax(min(100%, 10rem),1fr));
+    gap: 1rem;
+  }
+  .component-specimen > .map-board > section::before { content: none; }
+}
