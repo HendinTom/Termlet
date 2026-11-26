@@ -121,4 +121,4 @@ export const childrenOf = id => definitions.filter(item=>item.parent===id);
 export function descendants(id) {
   return [components[id], ...childrenOf(id).flatMap(child=>descendants(child.id))];
 }
-export const componentName = id => id.replace(/([a-z])([A-Z])/g,'$1 $2');
+export const componentName = id => id === 'CursorGlow' ? 'Adaptive cursor' : id.replace(/([a-z])([A-Z])/g,'$1 $2');

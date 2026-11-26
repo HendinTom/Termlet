@@ -7,6 +7,12 @@ const capture = (name, version) => ({
 });
 
 export const iterations = [{
+  id: '006', name: 'Adaptive cursor', previousPreview: 'https://hendintom.github.io/Termlet/iterations/005-cursor-glow/', changes: [
+    { id: 'cursor-fill', area: 'Interactions', name: 'Adaptive cursor', status: 'Updated',
+      note: 'The secondary-accent dot expands from the entry point to fill text and controls. The fill uses the dark neutral in light mode and the light neutral in dark mode.',
+      before: capture('cursor-glow','005'), after: capture('cursor-fill','006'), context: '#design/components/CursorGlow' }
+  ]
+}, {
   id: '005', name: 'Cursor and selection', previousPreview: 'https://hendintom.github.io/Termlet/iterations/004-home-listings/', changes: [
     { id: 'cursor-glow', area: 'Interactions', name: 'Cursor glow', status: 'Added',
       note: 'A soft secondary-accent gradient follows a hovering pointer. Adjust its diameter, blur and intensity in Components. The centered sample also previews the effect on touchscreens.',

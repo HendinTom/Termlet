@@ -1,6 +1,6 @@
-@layer baseline, component-edits;
+@layer baseline, component-edits, cursor-feedback;
 @import './style.css' layer(baseline);
 @import './design/tones.css' layer(baseline);
 @import './design/design.css' layer(baseline);
-@import './components/cursor-glow.css' layer(baseline);
+@import './components/cursor-glow.css' layer(cursor-feedback);
 @import './marketplace-layout.css' layer(baseline);

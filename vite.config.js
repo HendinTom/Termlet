@@ -7,7 +7,8 @@ const selectionPlugin = {
   Once(root) {
     root.walkDecls('color', declaration => {
       const selector = declaration.parent.selector;
-      if (!selector || selector.includes('::')) return;
+      // Pointer feedback changes contrast temporarily. Keep the original text selection role.
+      if (!selector || selector.includes('::') || selector.includes('[data-cursor-fill]')) return;
       const [background, foreground] = selectionColors(declaration.value);
       declaration.cloneAfter({ prop: '--selection-fg', value: foreground });
       declaration.cloneAfter({ prop: '--selection-bg', value: background });

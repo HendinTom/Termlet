@@ -1,37 +1,98 @@
 import { useEffect, useRef } from 'react';
 import { UI } from './UI';
+import { descendants } from './catalog';
 import { useComponentStyles } from '../design/componentStyles';
 import { glowControls } from './glowControls';
+
+const controls = 'button, a[href], summary, [role="button"], [role="option"]';
+const fillable = ['[data-cursor-fillable]', '[data-ui="Metric"]', '.portal-metrics > div', '.data-row', 'h1', 'h2', 'h3', 'h4', 'p', 'small', 'strong', 'legend', 'label:not(:has(input,select,textarea))',
+  ...['Text', 'Heading', 'Badge', 'Notice'].flatMap(family => descendants(family).map(part => '[data-ui="' + part.id + '"]'))
+].join(',');
+const excluded = 'img, picture, [role="img"], .card-image-link, .hero-image-link, .gallery-thumbs, input, textarea, select, [contenteditable="true"], [inert], :disabled, [aria-disabled="true"]';
+
+function fillTarget(hit) {
+  if (!hit || hit.closest(excluded)) return null;
+  return hit.closest(controls) || hit.closest(fillable);
+}
 
 export function CursorGlow({ specimen = false }) {
   const layer = useRef(null);
   const dot = useRef(null);
   const { edits } = useComponentStyles();
   const settings = edits.CursorGlow || {};
+  const [diameter, duration] = glowControls.map(({ key, initial }) => settings[key] ?? initial);
+
   useEffect(() => {
     if (specimen) return;
     const overlay = layer.current;
     const media = matchMedia('(any-hover: hover) and (any-pointer: fine) and (prefers-reduced-motion: no-preference) and (forced-colors: none)');
-    let lastDialog;
+    let active = null;
+    let point = null;
+    let frame = 0;
+    let lastDialog = null;
+
+    function release() {
+      if (!active) return;
+      delete active.dataset.cursorFill;
+      for (const key of ['x', 'y', 'reach', 'start', 'time']) active.style.removeProperty('--cursor-' + key);
+      active = null;
+    }
     function hide() {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      point = null;
+      release();
+      delete document.documentElement.dataset.customPointer;
       overlay.hidePopover?.();
       overlay.hidden = true;
       lastDialog = null;
     }
-    function move(event) {
-      if (!media.matches || event.pointerType === 'touch') {
-        if (!overlay.hidden) hide();
+    function paint() {
+      frame = 0;
+      if (!point) return;
+      const { x, y } = point;
+      const hit = document.elementFromPoint(x, y);
+      if (!hit) return hide();
+      if (!document.documentElement.hasAttribute('data-custom-pointer')) document.documentElement.dataset.customPointer = '';
+      const next = fillTarget(hit);
+      if (next !== active) {
+        release();
+        if (next) {
+          const rect = next.getBoundingClientRect();
+          const left = x - rect.left, top = y - rect.top;
+          const reach = Math.hypot(Math.max(left, rect.width - left), Math.max(top, rect.height - top));
+          next.style.setProperty('--cursor-x', left + 'px');
+          next.style.setProperty('--cursor-y', top + 'px');
+          next.style.setProperty('--cursor-reach', Math.ceil(reach) + 'px');
+          next.style.setProperty('--cursor-start', getComputedStyle(next).backgroundColor);
+          next.style.setProperty('--cursor-time', duration + 'ms');
+          next.dataset.cursorFill = '';
+          active = next;
+        }
+      }
+      if (active) {
+        if (!overlay.hidden) {
+          overlay.hidePopover?.();
+          overlay.hidden = true;
+        }
         return;
       }
-      const dialog = event.target.closest?.('dialog[open]');
+      const dialog = hit.closest('dialog[open]');
       if (overlay.hidden || dialog !== lastDialog) {
-        // Reopen above the active picker when its native dialog enters the top layer.
         overlay.hidePopover?.();
         overlay.hidden = false;
         overlay.showPopover?.();
         lastDialog = dialog;
       }
-      dot.current.style.translate = event.clientX + 'px ' + event.clientY + 'px';
+      dot.current.style.translate = x + 'px ' + y + 'px';
+    }
+    function schedule() {
+      if (point && !frame) frame = requestAnimationFrame(paint);
+    }
+    function move(event) {
+      if (!media.matches || event.pointerType === 'touch') return hide();
+      point = { x: event.clientX, y: event.clientY };
+      schedule();
     }
     function leave(event) {
       if (!event.relatedTarget) hide();
@@ -41,21 +102,23 @@ export function CursorGlow({ specimen = false }) {
     }
     const controller = new AbortController();
     const options = { passive: true, capture: true, signal: controller.signal };
-    window.addEventListener('pointermove', move, options);
+    for (const event of ['pointermove', 'pointerover']) window.addEventListener(event, move, options);
+    for (const event of ['scroll', 'resize', 'hashchange']) window.addEventListener(event, schedule, options);
+    for (const event of ['keydown', 'pointercancel', 'pagehide']) window.addEventListener(event, hide, options);
+    window.addEventListener('blur', hide, { signal: controller.signal });
     window.addEventListener('pointerdown', touch, options);
     window.addEventListener('pointerout', leave, options);
-    window.addEventListener('pointercancel', hide, options);
-    window.addEventListener('keydown', hide, options);
-    window.addEventListener('blur', hide, options);
     document.addEventListener('visibilitychange', hide, options);
     media.addEventListener('change', hide, options);
-    return () => controller.abort();
-  }, [specimen]);
+    return () => { controller.abort(); hide(); };
+  }, [specimen, duration]);
 
-  const style = Object.fromEntries(glowControls.map(({ key, initial, unit }) =>
-    ['--' + key, (settings[key] ?? initial) + unit]
-  ));
-  const glow = <UI.CursorGlow aria-hidden="true" ref={dot} style={style} />;
-  if (specimen) return <div className="cursor-glow-specimen">{glow}</div>;
-  return <div className="cursor-glow-layer" ref={layer} popover="manual" hidden inert aria-hidden="true">{glow}</div>;
+  const mark = <UI.CursorGlow aria-hidden="true" ref={dot} style={{ '--dot-diameter': diameter + 'px' }} />;
+  if (specimen) return (
+    <div className="cursor-glow-specimen">
+      <div><span className="cursor-sample-shape">{mark}</span><small>Open space</small></div>
+      <div><span className="cursor-sample-shape"><UI.SecondaryButton data-cursor-sample="">Find a sublet</UI.SecondaryButton></span><small>Over a button</small></div>
+    </div>
+  );
+  return <div className="cursor-glow-layer" ref={layer} popover="manual" hidden inert aria-hidden="true">{mark}</div>;
 }

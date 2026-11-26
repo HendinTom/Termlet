@@ -16,12 +16,10 @@
 .cursor-glow-layer::backdrop { background: transparent; pointer-events: none; }
 .cursor-glow {
   display: block;
-  width: var(--diameter);
-  height: var(--diameter);
+  width: var(--dot-diameter);
+  height: var(--dot-diameter);
   border-radius: 50%;
-  background: radial-gradient(circle closest-side, var(--secondary), transparent);
-  filter: blur(var(--blur));
-  opacity: var(--intensity);
+  background: var(--secondary);
   pointer-events: none;
 }
 .cursor-glow-layer > .cursor-glow {
@@ -31,9 +29,43 @@
   transform: translate(-50%, -50%);
   will-change: translate;
 }
-.cursor-glow-specimen {
-  display: grid;
-  place-content: center;
-  height: 180px;
-  overflow: clip;
+/* Paint inside the target so its clipping, border radius, and hit area stay intact. */
+:root[data-custom-pointer],
+:root[data-custom-pointer] * { cursor: none; }
+
+@property --cursor-radius {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
 }
+
+[data-cursor-fill],
+[data-cursor-sample] {
+  background-color: var(--ink);
+  background-image: none;
+  color: var(--paper);
+}
+[data-cursor-fill] :where(:not(svg, svg *)) { color: var(--paper); }
+[data-cursor-fill] {
+  animation: cursor-fill-in var(--cursor-time) ease-out;
+}
+@keyframes cursor-fill-in {
+  from, to {
+    background-color: var(--cursor-start);
+    background-image: radial-gradient(circle at var(--cursor-x) var(--cursor-y),
+      var(--ink) var(--cursor-radius), transparent calc(var(--cursor-radius) + 1px));
+  }
+  from { --cursor-radius: 0px; }
+  to { --cursor-radius: var(--cursor-reach); }
+}
+.cursor-glow-specimen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  min-height: 180px;
+  text-align: center;
+}
+.cursor-sample-shape { display: grid; place-items: center; min-height: 56px; }
+.cursor-glow-specimen small { color: var(--muted); }
