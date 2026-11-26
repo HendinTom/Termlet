@@ -16,6 +16,8 @@ Termlet is a mobile-friendly student sublet marketplace for Waterloo Region and 
 
 ## Iteration workflow
 
+Design-system-only updates stay on the current iteration branch and do not add visual change records.
+
 1. Read the README, check the branch and working tree, then branch from the latest iteration using the next numbered name. Preserve existing work and earlier iteration branches.
 2. Implement the requested change. Test affected flows on desktop and mobile and compare with the preceding iteration.
 3. Commit and push the completed iteration to [the repository](https://github.com/HendinTom/Termlet). Preserve GitHub Pages publishing for each numbered branch and the latest iteration at the site root.

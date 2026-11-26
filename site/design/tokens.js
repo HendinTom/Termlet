@@ -1,6 +1,7 @@
 export const tokens = [
-  { key: '--green', name: 'Brand green', initial: '#194c37' },
-  { key: '--paper', name: 'Page background', initial: '#f7f6f0' },
+  { key: '--ink', name: 'Text', initial: '#222222' },
+  { key: '--paper', name: 'Page background', initial: '#ffffff' },
+  { key: '--green', name: 'Accent', initial: '#194c37' },
   { key: '--surface-radius', name: 'Panel radius', initial: 16, max: 36 },
   { key: '--surface-padding', name: 'Panel padding', initial: 24, min: 8, max: 40 }
 ];
@@ -10,6 +11,8 @@ const valid = (t,v) => t.max ? Number.isInteger(v) && v >= (t.min || 0) && v <= 
 export function restoreTokens() {
   let saved;
   try { saved = JSON.parse(localStorage.getItem(storageKey)); } catch {}
+  // Older saves included the former paper default alongside every adjustment.
+  if (saved && !Object.hasOwn(saved, '--ink') && saved['--paper'] === '#f7f6f0') delete saved['--paper'];
   const values = {};
   for (const t of tokens) values[t.key] = valid(t, saved?.[t.key]) ? saved[t.key] : t.initial;
   applyTokens(values);
