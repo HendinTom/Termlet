@@ -14,6 +14,8 @@ Termlet is a mobile-friendly student sublet marketplace for Waterloo Region and 
 - Maintain a map of adopted design decisions and a record of changes from the previous branch. Label experiments separately from adopted defaults.
 - Provide opt-in controls for experimenting with colors and other visual settings. Keep experiments local until a change is adopted in source.
 
+Use the editable ink, paper and accent tokens for app UI colors. Derive tints, shades, borders and translucent states in CSS.
+
 ## Iteration workflow
 
 Design-system-only updates stay on the current iteration branch and do not add visual change records.
