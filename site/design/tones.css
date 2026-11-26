@@ -1,12 +1,14 @@
 :root {
   --accent-readable: oklch(from var(--accent) min(l, 0.50) c h);
+  --accent-text: light-dark(var(--accent-readable), var(--ink));
+  --accent-hover: color-mix(in srgb, var(--accent-readable) 74%, var(--base-ink));
   --secondary-tint: color-mix(in srgb, var(--secondary) 18%, var(--paper));
   --secondary-shade: color-mix(in srgb, var(--secondary) 48%, var(--ink));
-  --accent-strong: color-mix(in srgb, var(--accent-readable) 74%, var(--ink));
+  --accent-strong: color-mix(in srgb, var(--accent-text) 74%, var(--ink));
   --muted: color-mix(in srgb, var(--ink) 68%, var(--line));
   --surface-subtle: color-mix(in srgb, var(--accent) 4%, var(--paper));
   --tint: color-mix(in srgb, var(--accent) 8%, var(--paper));
   --pale: color-mix(in srgb, var(--accent) 15%, var(--paper));
-  --line: color-mix(in srgb, var(--accent) 24%, var(--paper));
-  --line-strong: color-mix(in srgb, var(--accent-readable) 50%, var(--paper));
+  --line: light-dark(color-mix(in srgb, var(--accent) 24%, var(--paper)), color-mix(in srgb, var(--ink) 24%, var(--paper)));
+  --line-strong: color-mix(in srgb, var(--accent-text) 50%, var(--paper));
 }

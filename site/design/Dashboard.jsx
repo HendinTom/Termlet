@@ -6,7 +6,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { ListingCard, PriceRow } from '../components/Marketplace';
 import { ColorControl } from './ColorControl';
 import { iterations } from './history';
-import { tokens, useTokens, saveTokens } from './tokens';
+import { tokens, useTokens, useDarkMode, saveTokens } from './tokens';
 
 function ChangeIndex({ iteration, selected }) {
   const areas = [...new Set(iteration.changes.map((c) => c.area))];
@@ -97,6 +97,7 @@ function Comparison({ iteration, change }) {
 }
 
 function Adjustments({ sample }) {
+  const dark = useDarkMode();
   const values = useTokens();
   const styles=useComponentStyles();
   const [resetCount, setResetCount] = useState(0);
@@ -107,7 +108,7 @@ function Adjustments({ sample }) {
     <UI.LabLayout>
       <UI.AdjustmentControls>
         <UI.Heading>Adjustments</UI.Heading>
-        <UI.Text>Saved in this browser for iteration {iterations[0].id}.</UI.Text>
+        <UI.Text>Saved in this browser for iteration {iterations[0].id}.{dark && ' Dark mode swaps the Text and Page background colors.'}</UI.Text>
         {tokens.map((t) =>
           !t.max ? (
             <ColorControl
@@ -229,7 +230,7 @@ function DesignMap({ sample }) {
                     {t.max ? (
                       <i className="dimension">↔</i>
                     ) : (
-                      <i style={{ background: 'var(' + t.key + ')' }} />
+                      <i style={{ background: values[t.key] }} />
                     )}
                     {t.name}
                     <UI.Text as="small">

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { FooterLinks } from './components/Marketplace';
 import { startMarketplace } from './marketplace';
+import { ThemeToggle } from './components/ThemeToggle';
 import { restoreTokens } from './design/tokens';
 import './theme.css';
 import { restoreStyles } from './design/componentStyles';
@@ -13,14 +14,14 @@ function Shell() {
       <UI.Skip href="#main">Skip to content</UI.Skip>
       <UI.PageHeader>
         <UI.Shell className="nav">
-          <UI.Brand href="#home" aria-label="Termlet home">
+          <div className="brand-controls"><UI.Brand href="#home" aria-label="Termlet home">
             <UI.Mark aria-hidden="true">
               <i />
               <i />
               <i />
             </UI.Mark>
             termlet<UI.BrandDot>.</UI.BrandDot>
-          </UI.Brand>
+          </UI.Brand><ThemeToggle/></div>
           <UI.Navigation aria-label="Main navigation">
             <UI.Link href="#browse" aria-label="Find a sublet">
               <span className="nav-wide">Find a sublet</span>

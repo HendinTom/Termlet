@@ -6,7 +6,7 @@
   .component-specimen > .map-tools { display: flex; flex-wrap: wrap; }
   .component-specimen > .mobile-sides [aria-pressed="true"] {
     background: var(--accent-readable);
-    color: var(--paper);
+    color: var(--base-paper);
   }
   .component-specimen > img { max-width: 100%; height: auto; display: block; }
   .component-specimen > .specimen-hero { display: block; margin: 0; }

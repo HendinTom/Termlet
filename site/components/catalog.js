@@ -15,6 +15,7 @@ function classes(parent, tag, names) {
 }
 
 define('Button','button','button, .btn');
+define('ThemeToggle','button','.theme-toggle','Button','theme-toggle');
 define('ActionButton','button','.btn','Button','btn');
 define('PrimaryButton','button','.btn:not(.alt)','ActionButton');
 define('SecondaryButton','button','.btn.alt','ActionButton','alt');

@@ -17,5 +17,13 @@
   inset-inline-start: -0.14em;
   inset-block-start: 0.16em;
   block-size: 0.7em;
-  border-inline-start: 3px solid var(--accent-readable);
+  border-inline-start: 3px solid var(--accent-text);
 }
+
+.brand-controls { display:flex; align-items:center; gap:10px; }
+.theme-toggle { display:grid; place-items:center; width:36px; height:36px; padding:0; border:1px solid var(--line); border-radius:50%; background:var(--paper); color:var(--ink); }
+.theme-toggle:hover { background:var(--tint); border-color:var(--line-strong); }
+@media (max-width:620px) { .brand-controls { gap:5px; } }
+
+:root[data-theme="dark"] .btn:not(.alt) { border-color:var(--line-strong); }
+:root[data-theme="dark"] .lab-tabs [aria-current] { border-bottom-color:var(--ink); }
