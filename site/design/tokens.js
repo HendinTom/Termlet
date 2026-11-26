@@ -4,7 +4,7 @@ export const tokens = [
   { key: '--surface-radius', name: 'Panel radius', initial: 16, max: 36 },
   { key: '--surface-padding', name: 'Panel padding', initial: 24, min: 8, max: 40 }
 ];
-const storageKey = 'termlet:002:design-tokens';
+const storageKey = 'termlet:003:design-tokens';
 const valid = (t,v) => t.max ? Number.isInteger(v) && v >= (t.min || 0) && v <= t.max : /^#[a-f0-9]{6}$/i.test(v);
 
 export function restoreTokens() {

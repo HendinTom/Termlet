@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ListingCard, PriceRow } from '../components/Marketplace';
+import { ColorControl } from './ColorControl';
 import { iterations } from './history';
 import { tokens, restoreTokens, saveTokens } from './tokens';
 
@@ -33,12 +34,14 @@ function Comparison({ iteration, change }) {
 
 function Adjustments({ sample }) {
   const [values,setValues] = useState(restoreTokens);
+  const [resetCount, setResetCount] = useState(0);
   function update(next) { saveTokens(next); setValues(next); }
-  return <div className="lab-layout"><section className="lab-panel adjustment-controls"><h2>Adjustments</h2><p>Saved in this browser for iteration 002.</p>
-    {tokens.map(t=><label key={t.key}>{t.name}<output>{values[t.key]}{t.max?'px':''}</output>
-      <input type={t.max?'range':'color'} min={t.min || 0} max={t.max} value={values[t.key]}
-        onChange={e=>update({...values,[t.key]:t.max?Number(e.target.value):e.target.value})}/></label>)}
-    <button className="plain-button" onClick={()=>update(Object.fromEntries(tokens.map(t=>[t.key,t.initial])))}>Reset to defaults</button></section>
+  return <div className="lab-layout"><section className="lab-panel adjustment-controls"><h2>Adjustments</h2><p>Saved in this browser for iteration {iterations[0].id}.</p>
+    {tokens.map(t=>!t.max ? <ColorControl key={t.key + resetCount} name={t.name} value={values[t.key]}
+      onChange={color=>update({...values,[t.key]:color})}/> : <label key={t.key}>{t.name}<output>{values[t.key]}{t.max?'px':''}</output>
+      <input type="range" min={t.min || 0} max={t.max} value={values[t.key]}
+        onChange={e=>update({...values,[t.key]:Number(e.target.value)})}/></label>)}
+    <button className="plain-button" onClick={()=>{update(Object.fromEntries(tokens.map(t=>[t.key,t.initial])));setResetCount(n=>n+1);}}>Reset to defaults</button></section>
     <section className="lab-panel"><h2>Live preview</h2><div className="live-grid"><ListingCard item={sample}/>
       <div className="panel"><p className="metric-label">Monthly sublet rent</p><h2>{sample.price} <small>/ month</small></h2>
       <a className="btn" href="#room/sample">Open listing</a></div></div></section></div>;
