@@ -94,7 +94,7 @@ export function CursorGlow({ specimen = false }) {
           bridge.current.setAttribute('transform', `translate(${edge.x} ${edge.y}) rotate(${edge.angle})`);
           bridge.current.setAttribute('d', bridgePath(edge));
           overlay.style.setProperty('--edge-strength', edge.strength);
-          overlay.style.setProperty('--edge-blur', Math.min(8, glowSize * 0.6) * edge.strength + 'px');
+          overlay.style.setProperty('--orb-radius', (glowSize + pointerSize / 4) + 'px');
           overlay.dataset.edge = '';
         } else {
           delete overlay.dataset.edge;
@@ -141,13 +141,12 @@ export function CursorGlow({ specimen = false }) {
     document.addEventListener('visibilitychange', hide, options);
     media.addEventListener('change', hide, options);
     return () => { controller.abort(); hide(); };
-  }, [specimen, duration, glowSize, edgeRange]);
+  }, [specimen, duration, glowSize, edgeRange, pointerSize]);
 
   const mark = (
     <UI.CursorGlow aria-hidden="true" ref={pointer} style={{ '--pointer-size': pointerSize + 'px' }}>
-      {/* Phosphor Cursor Fill, MIT. License is distributed in public/licenses. */}
-      <svg viewBox="20 20 245 245" aria-hidden="true">
-        <path transform="rotate(15 38 38)" d="M220.49,207.8,207.8,220.49a12,12,0,0,1-17,0l-56.57-56.57L115,214.08l-.13.33A15.84,15.84,0,0,1,100.26,224l-.78,0a15.82,15.82,0,0,1-14.41-11L32.8,52.92A15.95,15.95,0,0,1,52.92,32.8L213,85.07a16,16,0,0,1,1.41,29.8l-.33.13-50.16,19.27,56.57,56.56A12,12,0,0,1,220.49,207.8Z" />
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5.6 3.2C3 1.9 1.5 3.1 2.2 6C2.9 9.1 4.5 15.1 5.8 19.1C6.7 22 8.5 22.7 11.1 21C14.1 19 17.4 16.8 20.1 14.8C22.3 13.2 22.1 11.2 19.6 9.9C15.6 7.8 9.7 5.1 5.6 3.2Z" />
       </svg>
     </UI.CursorGlow>
   );

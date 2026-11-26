@@ -25,14 +25,14 @@
   display: block;
   fill: currentColor;
   stroke: color-mix(in srgb, var(--base-ink) 60%, transparent);
-  stroke-width: 10;
+  stroke-width: 0.85;
   stroke-linejoin: round;
 }
 .cursor-glow-layer > .cursor-glow {
   position: absolute;
   top: 0;
   left: 0;
-  transform: translate(-7%, -7%);
+  transform: translate(-12%, -13%);
   will-change: translate;
 }
 /* Paint inside the target so its clipping, border radius, and hit area stay intact. */
@@ -59,9 +59,22 @@
   opacity: calc(var(--edge-strength) * 0.75);
   filter: blur(2px);
 }
-.cursor-glow-layer[data-edge] .cursor-glow svg {
-  filter: drop-shadow(0 0 var(--edge-blur) var(--secondary));
+/* The orb follows the pointer while the bridge stays anchored to the card. */
+.cursor-glow-layer[data-edge] .cursor-glow::before {
+  content: '';
+  position: absolute;
+  left: 46%;
+  top: 50%;
+  width: calc(2 * var(--orb-radius));
+  height: calc(2 * var(--orb-radius));
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle closest-side,
+    color-mix(in srgb, var(--secondary) 78%, transparent) 0 25%,
+    color-mix(in srgb, var(--secondary) 38%, transparent) 58%, transparent);
+  opacity: var(--edge-strength);
 }
+.cursor-glow-layer .cursor-glow svg { position: relative; }
 
 [data-cursor-fill],
 [data-cursor-sample] {
@@ -73,7 +86,7 @@
 /* A real outer shadow remains visible around a card's clipped photo. Its
    starting footprint is inset and offset toward the pointer entry point. */
 @media (any-hover: hover) and (any-pointer: fine) and (prefers-reduced-motion: no-preference) and (forced-colors: none) {
-  :where(a[href]:has(img, [role="img"]):not(.card-image-link, .btn)):hover {
+  :where(a[href]:has(img, [role="img"]):not(.card-image-link, .hero-image-link, .btn)):hover {
     outline: 2px solid var(--secondary);
     outline-offset: -2px;
   }

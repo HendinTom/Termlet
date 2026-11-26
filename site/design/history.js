@@ -7,6 +7,18 @@ const capture = (name, version) => ({
 });
 
 export const iterations = [{
+  id: '009', name: 'Soft pointer and hero hover', previousPreview: 'https://hendintom.github.io/Termlet/iterations/008-card-glow/', changes: [
+    { id: 'pointer', area: 'Interactions', name: 'Adaptive cursor', status: 'Updated',
+      note: 'A compact triangle with three rounded corners marks the pointer position.',
+      before: capture('pointer','008'), after: capture('pointer','009'), context: '#design/components/CursorGlow' },
+    { id: 'card-edge', area: 'Marketplace', name: 'Card edge glow', status: 'Updated',
+      note: 'A circular halo surrounds the pointer as it pulls away from a card. The connection starts on contact and now reaches up to 32 px.',
+      before: capture('card-edge','008'), after: capture('card-edge','009'), context: '#browse' },
+    { id: 'hero-image', area: 'Home page', name: 'Spotlight photo', status: 'Updated',
+      note: 'Hovering the photo underlines the room title. Keyboard focus appears around the caption link in both themes. Both captures use a hovering mouse.',
+      before: capture('hero-image','008'), after: capture('hero-image','009'), context: '#home' }
+  ]
+}, {
   id: '008', name: 'Card edge glow', previousPreview: 'https://hendintom.github.io/Termlet/iterations/007-pointer-emphasis/', changes: [
     { id: 'pointer', area: 'Interactions', name: 'Adaptive cursor', status: 'Updated',
       note: 'The pointer has an arrowhead and stem. Only buttons and other fillable surfaces use the ripple.',

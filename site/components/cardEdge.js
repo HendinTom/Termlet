@@ -24,13 +24,13 @@ export function cardEdge(rect, cornerRadius, { x, y }, range) {
 // In this local coordinate system the edge is vertical and +x points toward
 // the cursor. The bulb narrows as the pointer pulls away from the card.
 export function bridgePath({ distance, strength }) {
-  const reach = Math.max(distance, 0) + 5 * strength;
-  const base = 5 + 11 * strength;
-  const neck = 1 + 3 * strength;
+  const reach = Math.max(distance, 0) + 6 * strength;
+  const base = 6 + 12 * strength;
+  const neck = 1.5 + 4 * strength;
   return [
     `M -1 ${-base}`,
     `C 1 ${-base * 0.6} ${reach * 0.4} ${-neck} ${reach} ${-neck}`,
-    `Q ${reach + neck * 2} 0 ${reach} ${neck}`,
+    `A ${neck} ${neck} 0 0 1 ${reach} ${neck}`,
     `C ${reach * 0.4} ${neck} 1 ${base * 0.6} -1 ${base} Z`
   ].join(' ');
 }

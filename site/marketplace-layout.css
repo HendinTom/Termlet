@@ -27,3 +27,21 @@
 
 :root[data-theme="dark"] .btn:not(.alt) { border-color:var(--line-strong); }
 :root[data-theme="dark"] .lab-tabs [aria-current] { border-bottom-color:var(--ink); }
+
+@media (any-hover: hover) and (any-pointer: fine) {
+  .hero-sponsored:has(.hero-image-link:hover) .hero-caption strong,
+  .hero-caption a:hover strong {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: .15em;
+  }
+}
+
+/* Both links open the same room. Use the caption for a legible focus ring
+   when the photo link's outline would be clipped by the figure. */
+.hero-sponsored:has(.hero-image-link:focus-visible) .hero-caption a,
+.hero-caption a:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+  border-radius: 3px;
+}
